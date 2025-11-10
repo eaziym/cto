@@ -1,12 +1,13 @@
 {
-  "name": "ep-aware-jobs",
+  "name": "cto-platform",
   "private": true,
   "version": "0.1.0",
+  "description": "CTO (Chief Talent Officer) – a context-aware career copilot built around a unified knowledge base for hyper-personalized job workflows.",
   "scripts": {
-    "dev": "pnpm run -r --parallel dev --filter ep-aware-api --filter ep-aware-web",
-    "build": "pnpm run -r build --filter ep-aware-api --filter ep-aware-web",
-    "test": "pnpm run -r test --filter ep-aware-api --filter ep-aware-web",
-    "lint": "pnpm run -r lint --filter ep-aware-api --filter ep-aware-web"
+    "dev": "pnpm run -r --parallel dev --filter cto-api --filter cto-web",
+    "build": "pnpm run -r build --filter cto-api --filter cto-web",
+    "test": "pnpm run -r test --filter cto-api --filter cto-web",
+    "lint": "pnpm run -r lint --filter cto-api --filter cto-web"
   },
   "workspaces": [
     "api",

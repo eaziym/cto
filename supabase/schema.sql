@@ -1,4 +1,4 @@
--- Supabase Database Schema for EP-Aware Job Platform
+-- Supabase Database Schema for CTO (Chief Talent Officer)
 -- Run this in your Supabase SQL Editor
 
 -- ============================================================================

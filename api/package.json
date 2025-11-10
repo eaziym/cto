@@ -1,7 +1,8 @@
 {
-  "name": "ep-aware-api",
+  "name": "cto-api",
   "private": true,
   "type": "module",
+  "description": "CTO API – Express + TypeScript service for knowledge-source ingestion, context extraction, and Supabase orchestration.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

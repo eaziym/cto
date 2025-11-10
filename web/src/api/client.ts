@@ -20,7 +20,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 }
 
 function buildUrl(path: string, query?: Record<string, string | number | undefined>): string {
-  const url = new URL(path, 'http://ep-aware.local');
+  const url = new URL(path, 'http://cto.local');
   if (query) {
     Object.entries(query).forEach(([key, value]) => {
       if (value !== undefined && value !== '') {
