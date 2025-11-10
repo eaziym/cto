@@ -141,6 +141,68 @@ router.get('/aggregate', requireAuth, async (req: Request, res: Response) => {
 });
 
 // ============================================================================
+// PATCH /api/knowledge-sources/aggregate
+// Update the aggregated unified profile
+// ============================================================================
+
+router.patch('/aggregate', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const updates = req.body;
+
+    if (!updates || typeof updates !== 'object') {
+      return res.status(400).json({ error: 'Invalid update data' });
+    }
+
+    logger.info(`[PATCH AGGREGATE] Updating profile for user ${userId}:`, Object.keys(updates));
+
+    // Get current aggregated profile
+    const { data, error: fetchError } = await supabaseAdmin
+      .from('profiles')
+      .select('knowledge_base_summary')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError || !data?.knowledge_base_summary) {
+      return res.status(404).json({ error: 'No aggregated profile found' });
+    }
+
+    // Merge updates with existing profile
+    const updatedProfile = {
+      ...data.knowledge_base_summary,
+      ...updates,
+      updated_at: new Date().toISOString()
+    };
+
+    // Save updated profile
+    const { error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update({
+        knowledge_base_summary: updatedProfile,
+        knowledge_base_updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    logger.info(`[PATCH AGGREGATE] Successfully updated profile for user ${userId}`);
+
+    res.json({
+      aggregated_profile: updatedProfile,
+      message: 'Profile updated successfully'
+    });
+  } catch (error) {
+    logger.error('Failed to update aggregated profile:', error);
+    res.status(500).json({
+      error: 'Failed to update profile',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// ============================================================================
 // POST /api/knowledge-sources/upload
 // Upload and parse a document (PDF, DOCX)
 // ============================================================================

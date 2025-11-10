@@ -155,155 +155,159 @@ export default function JobsListPage(): JSX.Element {
   const showingEnd = jobs.length ? showingStart + jobs.length - 1 : 0;
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-12">
-      <div className="mb-8">
-        <h2 className="text-3xl font-semibold text-slate-900">Browse Jobs</h2>
-        <p className="mt-2 text-sm text-slate-500">
-          Filter by keywords, company, or tags to find your perfect match.
-        </p>
-      </div>
-      <form
-        onSubmit={handleSubmit}
-        className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-card md:grid-cols-3"
-      >
-        <div className="md:col-span-1">
-          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">Search</label>
-          <input
-            type="text"
-            value={filters.search}
-            onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
-            placeholder="e.g. data, product, fintech"
-            className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-        </div>
-        
-        <MultiSelectDropdown
-          label="Company"
-          options={filterMetadata?.companies || []}
-          selected={filters.company}
-          onChange={(selected) => setFilters((prev) => ({ ...prev, company: selected }))}
-          placeholder="All companies"
-        />
-        
-        <MultiSelectDropdown
-          label="Tags"
-          options={filterMetadata?.tags || []}
-          selected={filters.tags}
-          onChange={(selected) => setFilters((prev) => ({ ...prev, tags: selected }))}
-          placeholder="All tags"
-        />
-        
-        <div className="flex items-end gap-3 md:col-span-3">
-          <button
-            type="submit"
-            className="inline-flex items-center rounded-lg bg-brand-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-brand-700"
+    <div className="flex flex-col bg-slate-50" style={{height: 'calc(100vh - 120px)'}}>
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+          {/* Filter Form */}
+          <form
+            onSubmit={handleSubmit}
+            className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-card md:grid-cols-3 mb-6"
           >
-            Apply filters
-          </button>
-          <button
-            type="button"
-            onClick={handleReset}
-            className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-          >
-            Reset
-          </button>
-        </div>
-      </form>
-
-      <div className="mt-10 grid gap-6">
-        {isLoading && <p className="text-sm text-slate-500">Loading results...</p>}
-        {data && data.items.length === 0 && (
-          <EmptyState
-            title="No jobs matched your filters"
-            description="Try widening your filters or updating your preferences in the Knowledge Base."
-          />
-        )}
-        {jobs.map((job) => {
-          const match = jobMatchesPreferences(job);
-          return (
-            <div key={job.id} className="relative">
-              {match.matches && match.matchCount > 0 && (
-                <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 px-4 py-2.5">
-                  <Sparkles className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-semibold text-blue-900">
-                    Matches your interests:
-                  </span>
-                  {match.reasons.map((reason, idx) => (
-                    <span key={idx} className="inline-flex items-center rounded-full bg-white border border-blue-200 px-3 py-1 text-xs font-medium text-blue-700 shadow-sm">
-                      {reason}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <JobCard job={job} />
+            <div className="md:col-span-1">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">Search</label>
+              <input
+                type="text"
+                value={filters.search}
+                onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
+                placeholder="e.g. data, product, fintech"
+                className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
             </div>
-          );
-        })}
-      </div>
-
-      {/* Pagination Controls */}
-      {data && data.items.length > 0 && totalPages > 1 && (
-        <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-6">
-          <div className="text-sm text-slate-600">
-            Showing {showingStart}-{showingEnd} of {data.total} results
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Previous
-            </button>
             
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum: number;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = currentPage - 2 + i;
-                }
-                
-                return (
-                  <button
-                    key={pageNum}
-                    type="button"
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={`inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium transition min-w-[40px] ${
-                      currentPage === pageNum
-                        ? 'bg-brand-600 text-white shadow-sm'
-                        : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
+            <MultiSelectDropdown
+              label="Company"
+              options={filterMetadata?.companies || []}
+              selected={filters.company}
+              onChange={(selected) => setFilters((prev) => ({ ...prev, company: selected }))}
+              placeholder="All companies"
+            />
+            
+            <MultiSelectDropdown
+              label="Tags"
+              options={filterMetadata?.tags || []}
+              selected={filters.tags}
+              onChange={(selected) => setFilters((prev) => ({ ...prev, tags: selected }))}
+              placeholder="All tags"
+            />
+            
+            <div className="flex items-end gap-3 md:col-span-3">
+              <button
+                type="submit"
+                className="inline-flex items-center rounded-lg bg-brand-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-brand-700"
+              >
+                Apply filters
+              </button>
+              <button
+                type="button"
+                onClick={handleReset}
+                className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+              >
+                Reset
+              </button>
             </div>
+          </form>
 
-            <button
-              type="button"
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-              <svg className="h-4 w-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+          {/* Job Listings */}
+          <div className="grid gap-6">
+            {isLoading && <p className="text-sm text-slate-500">Loading results...</p>}
+            {data && data.items.length === 0 && (
+              <EmptyState
+                title="No jobs matched your filters"
+                description="Try widening your filters or updating your preferences."
+              />
+            )}
+            {jobs.map((job) => {
+              const match = jobMatchesPreferences(job);
+              return (
+                <div key={job.id} className="relative overflow-hidden">
+                  {match.matches && match.matchCount > 0 && (
+                    <div className="mb-2 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 px-4 py-2.5 overflow-hidden">
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Sparkles className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-semibold text-blue-900">
+                          Matches your interests:
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 overflow-hidden">
+                        {match.reasons.map((reason, idx) => (
+                          <span key={idx} className="inline-flex items-center rounded-full bg-white border border-blue-200 px-3 py-1 text-xs font-medium text-blue-700 shadow-sm break-words max-w-full">
+                            {reason}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <JobCard job={job} />
+                </div>
+              );
+            })}
           </div>
+
+          {/* Pagination Controls */}
+          {data && data.items.length > 0 && totalPages > 1 && (
+            <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-t border-slate-200 pt-6">
+              <div className="text-sm text-slate-600">
+                Showing {showingStart}-{showingEnd} of {data.total} results
+              </div>
+              <div className="flex items-center gap-2 overflow-x-auto max-w-full">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                >
+                  <svg className="h-4 w-4 sm:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  <span className="hidden sm:inline">Previous</span>
+                </button>
+                
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum: number;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium transition min-w-[40px] flex-shrink-0 ${
+                          currentPage === pageNum
+                            ? 'bg-brand-600 text-white shadow-sm'
+                            : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <svg className="h-4 w-4 sm:ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

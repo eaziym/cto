@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FileText, Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -11,6 +11,7 @@ import ActionButtons from '../components/JobDetail/ActionButtons';
 import HRContactSection from '../components/JobDetail/HRContactSection';
 import FitAnalysisSidebar from '../components/JobDetail/FitAnalysisSidebar';
 import GeneratedMaterials from '../components/JobDetail/GeneratedMaterials';
+import FitScoreHero from '../components/JobDetail/FitScoreHero';
 import { analyzeJobFit, createApplication, searchHRContacts, getCachedHRContacts, generateOutreachMessage, fetchExistingAssessment, generateResume, generateCoverLetter, fetchJobMaterials, updateMaterial, type HRProspect, type JobAnalysisResponse, type GeneratedMaterial } from '../api/client';
 import { useJobDetail } from '../hooks/useJobs';
 import { useProfileStore } from '../store/profile';
@@ -50,6 +51,47 @@ export default function JobDetailPage(): JSX.Element {
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState<string>('');
   const [savingMaterial, setSavingMaterial] = useState(false);
+  const [jdExpanded, setJdExpanded] = useState(false);
+  
+  // Track if we've already initiated analysis for this job to prevent duplicate calls
+  const analysisInitiatedRef = useRef<string | null>(null);
+
+  // Auto-run fit analysis on page load
+  useEffect(() => {
+    const runAutoAnalysis = async () => {
+      if (!id || !profile) return;
+      
+      // Check if we already have an assessment - prevent duplicate calls
+      if (assessmentReport) return;
+      
+      // Check if we've already initiated analysis for this specific job
+      if (analysisInitiatedRef.current === id) return;
+      
+      // Mark as initiated before starting
+      analysisInitiatedRef.current = id;
+      setIsAnalyzing(true);
+      
+      try {
+        const result = await analyzeJobFit(id, false);
+        setAssessmentReport(result);
+        
+        // No longer setting COMPASS score - removed
+        
+        if (!result.from_cache) {
+          toast.success('Fit analysis completed!');
+        }
+      } catch (error) {
+        console.error('Auto-analysis failed:', error);
+        // Reset on error so user can retry
+        analysisInitiatedRef.current = null;
+        // Silently fail - user can manually trigger if needed
+      } finally {
+        setIsAnalyzing(false);
+      }
+    };
+
+    runAutoAnalysis();
+  }, [id, profile]); // Only run when id or profile changes
 
   // Remove automatic score population from data
   // Score only shows after user requests analysis with LLM
@@ -134,45 +176,51 @@ export default function JobDetailPage(): JSX.Element {
     setActiveModal('materials');
   };  if (!id) {
     return (
-      <div className="mx-auto max-w-4xl px-6 py-12">
-        <p className="text-sm text-red-500">Job not found.</p>
+      <div className="flex flex-col bg-slate-50" style={{height: 'calc(100vh - 120px)'}}>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-sm text-red-500">Job not found.</p>
+        </div>
       </div>
     );
   }
 
   if (isLoading || !data) {
     return (
-      <div className="mx-auto max-w-7xl px-6 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content Skeleton */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-card">
-              <div className="animate-pulse space-y-4">
-                <div className="h-4 bg-slate-200 rounded w-1/4"></div>
-                <div className="h-8 bg-slate-200 rounded w-3/4"></div>
-                <div className="h-4 bg-slate-200 rounded w-1/2"></div>
-                <div className="mt-6 space-y-3">
-                  <div className="h-4 bg-slate-200 rounded"></div>
-                  <div className="h-4 bg-slate-200 rounded"></div>
-                  <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+      <div className="flex flex-col bg-slate-50" style={{height: 'calc(100vh - 120px)'}}>
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Main Content Skeleton */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-card">
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+                    <div className="h-8 bg-slate-200 rounded w-3/4"></div>
+                    <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+                    <div className="mt-6 space-y-3">
+                      <div className="h-4 bg-slate-200 rounded"></div>
+                      <div className="h-4 bg-slate-200 rounded"></div>
+                      <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-card">
+                  <div className="animate-pulse space-y-3">
+                    <div className="h-10 bg-slate-200 rounded w-full"></div>
+                    <div className="h-10 bg-slate-200 rounded w-full"></div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-card">
-              <div className="animate-pulse space-y-3">
-                <div className="h-10 bg-slate-200 rounded w-full"></div>
-                <div className="h-10 bg-slate-200 rounded w-full"></div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Sidebar Skeleton */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
-              <div className="animate-pulse space-y-3">
-                <div className="h-6 bg-slate-200 rounded w-3/4"></div>
-                <div className="h-4 bg-slate-200 rounded"></div>
-                <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+              
+              {/* Sidebar Skeleton */}
+              <div className="lg:col-span-1 space-y-6">
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
+                  <div className="animate-pulse space-y-3">
+                    <div className="h-6 bg-slate-200 rounded w-3/4"></div>
+                    <div className="h-4 bg-slate-200 rounded"></div>
+                    <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -449,9 +497,11 @@ export default function JobDetailPage(): JSX.Element {
   const currentVerdict = (verdictOverride ?? data.epIndicator ?? 'Borderline') as CompassScore['verdict'];
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-12">
-      {/* Modals */}
-      <Modal
+    <div className="flex flex-col bg-slate-50" style={{height: 'calc(100vh - 120px)'}}>
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+          {/* Modals */}
+          <Modal
         open={activeModal === 'apply'}
         title="Confirm Application"
         description="Did you complete your application on the external site?"
@@ -1177,106 +1227,181 @@ export default function JobDetailPage(): JSX.Element {
         )}
       </Modal>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content - Takes 2 columns on desktop */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Job Header */}
-          <JobHeader
-            title={data.title}
-            company={data.company}
-            location={data.location}
-            tags={[data.industry]}
-            salary={data.salaryMinSGD && data.salaryMaxSGD ? `SGD ${data.salaryMinSGD.toLocaleString()} - ${data.salaryMaxSGD.toLocaleString()}` : undefined}
-            postedDate={data.createdAt}
-            isInternSG={data.isInternSG}
-          />
-
-          {/* Action Buttons */}
-          <ActionButtons
-            hasApplied={hasApplied}
-            onApply={handleOpenExternalLink}
-            onCheckFit={handleAssessFit}
-            onViewFit={() => setActiveModal('report')}
+      <div className="space-y-6">
+        {/* Fit Score Hero - Shows at top when analyzing or when assessment is available */}
+        {(isAnalyzing || assessmentReport) && (
+          <FitScoreHero
+            score={assessmentReport?.overall_score || 0}
+            decision={assessmentReport?.decision || 'pending'}
             isAnalyzing={isAnalyzing}
-            hasAssessment={!!assessmentReport}
           />
+        )}
 
-          {/* Generated Materials */}
-          <GeneratedMaterials
-            materials={materials}
-            onGenerateResume={handleGenerateResume}
-            onGenerateCoverLetter={handleGenerateCoverLetter}
-            onViewMaterials={handleViewMaterials}
-            isGeneratingResume={generatingResume}
-            isGeneratingCoverLetter={generatingCoverLetter}
-          />
+        {/* Job Header with collapsible JD */}
+        <JobHeader
+          title={data.title}
+          company={data.company}
+          location={data.location}
+          tags={[data.industry]}
+          salary={data.salaryMinSGD && data.salaryMaxSGD ? `SGD ${data.salaryMinSGD.toLocaleString()} - ${data.salaryMaxSGD.toLocaleString()}` : undefined}
+          postedDate={data.createdAt}
+          isInternSG={data.isInternSG}
+          description={data.description}
+        />
 
-          {/* HR Contact Section */}
-          <HRContactSection
-            companyName={data.company}
-            isInternSG={data.isInternSG}
-            hrName={data.hrName}
-            hrLoading={hrLoading}
-            hrProspects={hrProspects}
-            hrFetched={hrFetched}
-            outreachLoading={outreachLoading}
-            outreachMessage={outreachMessage}
-            selectedHRContact={selectedHRContact}
-            onFindHR={handleFindHR}
-            onSearchLinkedIn={() => {
-              // Prioritize HR name in search query if available (InternSG jobs)
-              const searchQuery = data.hrName
-                ? `site:linkedin.com/in/ "${data.hrName}" ${data.company} singapore`
-                : `site:linkedin.com/in/ ${data.company} (hr OR "hiring manager" OR "talent acquisition" OR recruiter) singapore`;
-              const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
-              window.open(googleSearchUrl, '_blank');
-            }}
-            onCopyEmail={handleCopyEmail}
-            onGenerateOutreach={handleGenerateOutreach}
-            onGenerateGenericOutreach={handleGenerateGenericOutreach}
-            onCopyOutreachMessage={handleCopyOutreachMessage}
-            onViewAllContacts={() => setActiveModal('hr')}
-          />
+        {/* Assessment Details - Show matches and gaps if available */}
+        {assessmentReport && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Strengths & Matches */}
+            {(assessmentReport.evidence.matched_must_haves.length > 0 || 
+              assessmentReport.evidence.matched_nice_to_haves.length > 0) && (
+              <div className="rounded-3xl border border-green-200 bg-green-50 p-6 shadow-card">
+                <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center gap-2">
+                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  You Match
+                </h3>
+                <div className="space-y-4">
+                  {assessmentReport.evidence.matched_must_haves.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-green-800 uppercase tracking-wide mb-2">
+                        Must-Haves
+                      </h4>
+                      <ul className="space-y-1">
+                        {assessmentReport.evidence.matched_must_haves.map((item, idx) => (
+                          <li key={idx} className="text-sm text-green-900 flex items-start gap-2">
+                            <span className="text-green-600 mt-0.5">•</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {assessmentReport.evidence.matched_nice_to_haves.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-green-800 uppercase tracking-wide mb-2">
+                        Nice-to-Haves
+                      </h4>
+                      <ul className="space-y-1">
+                        {assessmentReport.evidence.matched_nice_to_haves.map((item, idx) => (
+                          <li key={idx} className="text-sm text-green-900 flex items-start gap-2">
+                            <span className="text-green-600 mt-0.5">•</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-6 pt-4 border-t border-green-200">
+                  <button
+                    onClick={() => setActiveModal('report')}
+                    className="w-full text-sm font-medium text-green-700 hover:text-green-800 hover:underline text-center"
+                  >
+                    View Full Analysis →
+                  </button>
+                </div>
+              </div>
+            )}
 
-          {/* Job Description */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-card">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Job Description</h3>
-            <div 
-              className="mt-6 text-sm leading-relaxed text-slate-600"
-              dangerouslySetInnerHTML={{ 
-                __html: data.description
-                  // Convert markdown-style headers to bold
-                  .replace(/^#{1,3}\s+(.+)$/gm, '<h3 class="text-base font-bold text-slate-900 mt-6 mb-3">$1</h3>')
-                  // Make lines ending with colon bold (like "Key Qualifications:")
-                  .replace(/^([^:\n]+):$/gm, '<p class="font-semibold text-slate-900 mt-4 mb-2">$1:</p>')
-                  // Convert double newlines to paragraphs
-                  .split('\n\n')
-                  .map(para => {
-                    if (para.trim().startsWith('<')) return para; // Already has HTML
-                    return `<p class="mb-4">${para.replace(/\n/g, '<br />')}</p>`;
-                  })
-                  .join('')
-              }}
-            />
+            {/* Gaps to Address */}
+            {(assessmentReport.gaps.missing_must_haves.length > 0 || 
+              assessmentReport.gaps.risks.length > 0) && (
+              <div className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-card">
+                <h3 className="text-lg font-semibold text-amber-900 mb-4 flex items-center gap-2">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  Gaps to Address
+                </h3>
+                <div className="space-y-4">
+                  {assessmentReport.gaps.missing_must_haves.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-2">
+                        Missing Requirements
+                      </h4>
+                      <ul className="space-y-1">
+                        {assessmentReport.gaps.missing_must_haves.map((item, idx) => (
+                          <li key={idx} className="text-sm text-amber-900 flex items-start gap-2">
+                            <span className="text-amber-600 mt-0.5">•</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {assessmentReport.gaps.risks.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-2">
+                        Potential Concerns
+                      </h4>
+                      <ul className="space-y-1">
+                        {assessmentReport.gaps.risks.map((risk, idx) => (
+                          <li key={idx} className="text-sm text-amber-900 flex items-start gap-2">
+                            <span className="text-amber-600 mt-0.5">•</span>
+                            <span>{risk}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-6 pt-4 border-t border-amber-200">
+                  <button
+                    onClick={() => setActiveModal('report')}
+                    className="w-full text-sm font-medium text-amber-700 hover:text-amber-800 hover:underline text-center"
+                  >
+                    View Recommendations →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-        
-        {/* Sidebar - Assessment Summary - Takes 1 column on desktop */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Job Fit Analysis - Shows when available */}
-          {assessmentReport && (
-            <FitAnalysisSidebar
-              assessmentReport={assessmentReport}
-              scoreDetails={scoreDetails}
-              onViewFullReport={() => setActiveModal('report')}
-              onHide={() => {
-                setAssessmentReport(null);
-                setScoreDetails(undefined);
-                setScoreOverride(undefined);
-                setVerdictOverride(undefined);
-              }}
-            />
-          )}
+        )}
+
+        {/* Generated Materials */}
+        <GeneratedMaterials
+          materials={materials}
+          onGenerateResume={handleGenerateResume}
+          onGenerateCoverLetter={handleGenerateCoverLetter}
+          onViewMaterials={handleViewMaterials}
+          isGeneratingResume={generatingResume}
+          isGeneratingCoverLetter={generatingCoverLetter}
+        />
+
+        {/* HR Contact Section */}
+        <HRContactSection
+          companyName={data.company}
+          isInternSG={data.isInternSG}
+          hrName={data.hrName}
+          hrLoading={hrLoading}
+          hrProspects={hrProspects}
+          hrFetched={hrFetched}
+          outreachLoading={outreachLoading}
+          outreachMessage={outreachMessage}
+          selectedHRContact={selectedHRContact}
+          onFindHR={handleFindHR}
+          onSearchLinkedIn={() => {
+            const searchQuery = data.hrName
+              ? `site:linkedin.com/in/ "${data.hrName}" ${data.company} singapore`
+              : `site:linkedin.com/in/ ${data.company} (hr OR "hiring manager" OR "talent acquisition" OR recruiter) singapore`;
+            const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+            window.open(googleSearchUrl, '_blank');
+          }}
+          onCopyEmail={handleCopyEmail}
+          onGenerateOutreach={handleGenerateOutreach}
+          onGenerateGenericOutreach={handleGenerateGenericOutreach}
+          onCopyOutreachMessage={handleCopyOutreachMessage}
+          onViewAllContacts={() => setActiveModal('hr')}
+        />
+
+        {/* Apply Now Button */}
+        <ActionButtons
+          hasApplied={hasApplied}
+          onApply={handleOpenExternalLink}
+        />
+      </div>
         </div>
       </div>
     </div>
