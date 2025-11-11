@@ -636,6 +636,24 @@ export default function LandingPage(): JSX.Element {
           </Link>
         )}
       </div>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-200 bg-gray-50">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8">
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-6 text-sm text-gray-600">
+            <Link to="/privacy" className="hover:text-brand-600 transition-colors">
+              Privacy Policy
+            </Link>
+            <span className="hidden sm:inline text-gray-400">•</span>
+            <Link to="/terms" className="hover:text-brand-600 transition-colors">
+              Terms of Service
+            </Link>
+          </div>
+          <div className="text-center mt-4 text-xs text-gray-500">
+            © {new Date().getFullYear()} CTO. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
