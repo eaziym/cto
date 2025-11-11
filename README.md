@@ -21,17 +21,19 @@ CTO is a context-aware career copilot that constructs a unified knowledge base f
 
 ## Getting started
 
-> Requirements: Node 18+, pnpm 8+
+> Requirements: Node 20+, pnpm 8+
 
 ```bash
 # Install all workspace dependencies
 pnpm install
 
 # Copy env templates
+cp .env.example .env
 cp api/.env.example api/.env
-cp web/.env.example web/.env
 
-# Update secrets: OPENAI_API_KEY, Supabase keys, and VITE_API_URL
+# Update secrets in both .env files:
+# - Root .env: VITE_API_URL, VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+# - api/.env: OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SECRET_KEY, WEB_ORIGIN
 
 # Launch both services
 pnpm -w dev   # API on :8080, web on :5173
@@ -48,9 +50,19 @@ pnpm -w lint    # Type-level linting via tsc --noEmit
 
 ### Environment essentials
 
-- `api/.env` & `api/.env.example` enumerate OpenAI keys, Supabase connection info, optional FileStore toggles.
-- `web/.env` configures `VITE_API_URL` (defaults to `http://localhost:8080/api`) plus Supabase public keys.
-- Docker users can override `WEB_ORIGIN`/`API_ORIGIN` to point to externally reachable hosts.
+- **Root `.env`**: Build-time variables for the web frontend (VITE_*)
+- **`api/.env`**: Runtime variables for the API backend (OpenAI, Supabase, CORS)
+- See `.env.example` files for complete reference
+
+## Deployment
+
+For production deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+Quick summary:
+- Build Docker images with `--platform linux/amd64` for cloud servers
+- Configure environment variables for your domain
+- Set up reverse proxy (Caddy or Nginx)
+- Update Supabase authentication URLs
 
 ## Feature tour
 
@@ -77,5 +89,15 @@ Extraction helpers convert the unified profile into structured traits and highli
 - **Context extraction disabled** – `OPENAI_API_KEY` or Supabase creds missing in `api/.env`. Restart API after changes.
 - **File upload rejected** – Max 3 MB PDF/DOCX, enforced by Multer + MIME guards; errors bubble up to toasts.
 - **Rate limiting** – Resume analysis capped at 10/hour per IP; wait or update the limiter config if running privately.
+
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+
+---
 
 Happy shipping with your personal Chief Talent Officer. 🚀

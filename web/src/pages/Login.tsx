@@ -26,8 +26,10 @@ export default function LoginPage(): JSX.Element {
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-lg">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-brand-600">CTO</h1>
-          <p className="mt-2 text-sm text-slate-600">
+          <div className="flex justify-center mb-4">
+            <img src="/android-chrome-192x192.png" alt="CTO" className="w-16 h-16" />
+          </div>
+          <p className="mt-2 text-sm text-slate-900">
             Your Personal Chief Talent Officer
           </p>
           <p className="mt-3 text-xs text-slate-500">

@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: api/Dockerfile
     env_file:
-      - api/.env.example
+      - api/.env  # Your actual environment variables
     environment:
       - WEB_ORIGIN=http://localhost:5173
     ports:
@@ -17,7 +17,10 @@ services:
       context: .
       dockerfile: web/Dockerfile
       args:
-        VITE_API_URL: http://api:8080/api
+        # Build-time arguments from root .env file
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
     depends_on:
       - api
     ports:

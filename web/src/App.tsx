@@ -79,8 +79,8 @@ export default function App(): JSX.Element {
           <header className="border-b bg-white sticky top-0 z-30">
             <div className="flex items-center justify-between px-4 py-3 sm:py-4 w-full relative">
               <div className="flex items-center space-x-3 flex-shrink-0">
-                <Link to="/" className="text-lg sm:text-xl font-semibold text-brand-600">
-                  CTO
+                <Link to="/" className="flex items-center">
+                  <img src="/android-chrome-192x192.png" alt="CTO" className="w-7 h-7 sm:w-8 sm:h-8" />
                 </Link>
                 <p className="hidden sm:block text-xs text-slate-500">Your Personal Chief Talent Officer</p>
               </div>

@@ -3,3 +3,13 @@ api/node_modules/*
 web/node_modules/*
 .DS_Store
 .env
+api/.env
+
+# Deployment artifacts
+deploy-production.sh
+*.tar.gz
+Caddyfile.snippet
+
+# Local development
+.vscode/
+.idea/

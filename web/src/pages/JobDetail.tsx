@@ -734,34 +734,40 @@ export default function JobDetailPage(): JSX.Element {
               const isEditing = editingMaterialId === material.id;
               
               return (
-                <div key={material.id} className="rounded-lg border border-slate-200 bg-white p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${
-                        material.material_type === 'resume' 
-                          ? 'bg-indigo-100 text-indigo-700' 
-                          : 'bg-purple-100 text-purple-700'
-                      }`}>
-                        <FileText className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-slate-900 capitalize">
-                          {material.material_type.replace('_', ' ')}
-                        </h4>
-                        <p className="text-xs text-slate-500">
-                          Generated {new Date(material.created_at).toLocaleDateString()} at{' '}
-                          {new Date(material.created_at).toLocaleTimeString()}
-                        </p>
+                <div key={material.id} className="rounded-lg border border-slate-200 bg-white p-4 sm:p-6">
+                  {/* Header Section */}
+                  <div className="flex flex-col gap-3 mb-4">
+                    {/* Title Row */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${
+                          material.material_type === 'resume' 
+                            ? 'bg-indigo-100 text-indigo-700' 
+                            : 'bg-purple-100 text-purple-700'
+                        }`}>
+                          <FileText className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-slate-900 capitalize">
+                            {material.material_type.replace('_', ' ')}
+                          </h4>
+                          <p className="text-xs text-slate-500">
+                            Generated {new Date(material.created_at).toLocaleDateString()} at{' '}
+                            {new Date(material.created_at).toLocaleTimeString()}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    
+                    {/* Actions Row - Stacked on mobile, inline on desktop */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                       {!isEditing && (
                         <>
                           {/* View Mode Toggle */}
-                          <div className="flex items-center gap-1 rounded-md bg-slate-100 p-1">
+                          <div className="flex items-center gap-1 rounded-md bg-slate-100 p-1 w-full sm:w-auto">
                             <button
                               onClick={() => setMaterialViewMode(prev => ({ ...prev, [material.id]: 'preview' }))}
-                              className={`px-2 py-1 text-xs font-medium rounded transition ${
+                              className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium rounded transition ${
                                 viewMode === 'preview'
                                   ? 'bg-white text-slate-900 shadow-sm'
                                   : 'text-slate-600 hover:text-slate-900'
@@ -771,7 +777,7 @@ export default function JobDetailPage(): JSX.Element {
                             </button>
                             <button
                               onClick={() => setMaterialViewMode(prev => ({ ...prev, [material.id]: 'raw' }))}
-                              className={`px-2 py-1 text-xs font-medium rounded transition ${
+                              className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium rounded transition ${
                                 viewMode === 'raw'
                                   ? 'bg-white text-slate-900 shadow-sm'
                                   : 'text-slate-600 hover:text-slate-900'
@@ -780,49 +786,53 @@ export default function JobDetailPage(): JSX.Element {
                               Raw
                             </button>
                           </div>
-                          <button
-                            onClick={() => handleEditMaterial(material.id, material.content)}
-                            className="inline-flex items-center gap-1 rounded-md bg-blue-100 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-200 transition"
-                          >
-                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(material.content);
-                              toast.success('Content copied to clipboard!');
-                            }}
-                            className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 transition"
-                          >
-                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            Copy
-                          </button>
+                          
+                          {/* Action Buttons */}
+                          <div className="flex gap-2 w-full sm:w-auto">
+                            <button
+                              onClick={() => handleEditMaterial(material.id, material.content)}
+                              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 rounded-md bg-blue-100 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-200 transition"
+                            >
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(material.content);
+                                toast.success('Content copied to clipboard!');
+                              }}
+                              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 transition"
+                            >
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                              Copy
+                            </button>
+                          </div>
                         </>
                       )}
                       {isEditing && (
-                        <>
+                        <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
                           <button
                             onClick={handleCancelEdit}
                             disabled={savingMaterial}
-                            className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 transition disabled:opacity-50"
+                            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 transition disabled:opacity-50"
                           >
                             Cancel
                           </button>
                           <button
                             onClick={() => handleSaveMaterial(material.id)}
                             disabled={savingMaterial}
-                            className="inline-flex items-center gap-1 rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
+                            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
                           >
                             <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                             {savingMaterial ? 'Saving...' : 'Save'}
                           </button>
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>

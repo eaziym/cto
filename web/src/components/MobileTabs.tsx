@@ -22,6 +22,10 @@ interface MobileTabsProps {
   onPredictPreferences: () => void;
   onUpdatePreferences: (updates: Partial<UserPreferences>) => void;
   completedSourcesCount: number;
+
+  // Onboarding tour props
+  isTourActive?: boolean;
+  tourTab?: number;
 }
 
 function MobileTabs({
@@ -36,7 +40,9 @@ function MobileTabs({
   preferences,
   onPredictPreferences,
   onUpdatePreferences,
-  completedSourcesCount
+  completedSourcesCount,
+  isTourActive = false,
+  tourTab
 }: MobileTabsProps): JSX.Element {
   // Determine which tabs are completed/accessible
   const hasCompletedSources = completedSourcesCount > 0;
@@ -62,8 +68,18 @@ function MobileTabs({
 
   const [currentTab, setCurrentTab] = React.useState(activeTab);
 
+  // Update tab when tour is active and tourTab changes
+  React.useEffect(() => {
+    if (isTourActive && tourTab) {
+      setCurrentTab(tourTab);
+    }
+  }, [isTourActive, tourTab]);
+
   // Tab navigation with progressive disclosure
   const canAccessTab = (tabNumber: number): boolean => {
+    // During tour, all tabs are accessible
+    if (isTourActive) return true;
+
     switch (tabNumber) {
       case 1: return true; // Sources always accessible
       case 2: return hasCompletedSources; // Profile requires completed sources

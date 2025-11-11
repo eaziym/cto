@@ -40,6 +40,7 @@ export default function KnowledgeBasePage() {
   const loadProfileFromDB = useProfileStore((state) => state.loadProfileFromDB);
   const profile = useProfileStore((state) => state.profile);
   const [showOnboardingTour, setShowOnboardingTour] = useState(false);
+  const [tourMobileTab, setTourMobileTab] = useState(1);
 
   // Show onboarding tour for new users (0 sources, hasn't completed onboarding)
   useEffect(() => {
@@ -339,6 +340,8 @@ export default function KnowledgeBasePage() {
           onPredictPreferences={handlePredictPreferences}
           onUpdatePreferences={handleUpdatePreferences}
           completedSourcesCount={completedSources.length}
+          isTourActive={showOnboardingTour}
+          tourTab={tourMobileTab}
         />
       </div>
 
@@ -358,21 +361,38 @@ export default function KnowledgeBasePage() {
         steps={[
           {
             target: '[data-tour="add-source-button"]',
-            title: 'Welcome to Your Profile!',
-            content: 'Start by adding your first knowledge source. Upload your resume, connect LinkedIn, or add project documents to build your professional profile.',
+            title: 'Welcome! Let\'s Get You Set Up',
+            content: 'Click here to add your first piece of the puzzle—your resume, LinkedIn profile, GitHub projects, or anything else that tells your story. The more you add, the better we understand what makes you unique!',
             position: 'bottom',
+            mobileTab: 1, // Sources tab
           },
           {
             target: '[data-tour="sources-section"]',
-            title: 'Track Your Sources',
-            content: 'All your uploaded sources will appear here. You can view, delete, and manage them at any time.',
+            title: 'Your Collection Grows Here',
+            content: 'Everything you add shows up in this panel. We\'ll process each source to pull out the important bits. Don\'t worry—you can always check what we found, delete things, or add more whenever you want.',
             position: 'top',
+            mobileTab: 1, // Sources tab
           },
           {
             target: '[data-tour="aggregated-profile"]',
-            title: 'Your AI-Powered Profile',
-            content: 'Once you add sources, our AI will automatically analyze and aggregate your professional information here.',
+            title: 'Meet the Complete You',
+            content: 'Once we process your sources, this is where the magic happens. We combine everything into one comprehensive profile—all your experience, skills, education, and projects in one place. Think of it as your professional highlight reel!',
             position: 'top',
+            mobileTab: 2, // Profile tab
+          },
+          {
+            target: '[data-tour="preferences-panel"]',
+            title: 'What Are You Looking For?',
+            content: 'Based on your background, we\'ll suggest industries, roles, and companies that might interest you. These are just smart guesses—you can customize them to match what you\'re actually looking for. It helps us find jobs you\'ll actually like!',
+            position: 'left',
+            mobileTab: 3, // Interests tab
+          },
+          {
+            target: 'body',
+            title: 'Ready to Roll!',
+            content: 'That\'s the quick tour! Go ahead and add your first source to get started. Once your profile is ready, head over to the Jobs page and we\'ll show you opportunities that are actually worth your time.',
+            position: 'top',
+            mobileTab: 1, // Back to Sources tab
           },
         ]}
         isActive={showOnboardingTour}
@@ -384,6 +404,7 @@ export default function KnowledgeBasePage() {
           setShowOnboardingTour(false);
           completeOnboarding();
         }}
+        onMobileTabChange={setTourMobileTab}
       />
     </div>
   );
