@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import { useAuthStore } from '../store/auth';
 import { fetchKnowledgeSources } from '../api/client';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Github, Star } from 'lucide-react';
 
 export default function LandingPage(): JSX.Element {
   const { user } = useAuthStore();
@@ -13,6 +13,15 @@ export default function LandingPage(): JSX.Element {
   const [showResumePreview, setShowResumePreview] = useState(false);
   const [showCoverLetterPreview, setShowCoverLetterPreview] = useState(false);
   const [showAddSourceSuccess, setShowAddSourceSuccess] = useState(false);
+  const [githubStars, setGithubStars] = useState<number | null>(null);
+  
+  // Fetch GitHub stars
+  useEffect(() => {
+    fetch('https://api.github.com/repos/eaziym/cto')
+      .then(res => res.json())
+      .then(data => setGithubStars(data.stargazers_count))
+      .catch(() => setGithubStars(null));
+  }, []);
   
   // Intersection Observer for fade-in animations
   useEffect(() => {
@@ -648,9 +657,25 @@ export default function LandingPage(): JSX.Element {
             <Link to="/terms" className="hover:text-brand-600 transition-colors">
               Terms of Service
             </Link>
+            <span className="hidden sm:inline text-gray-400">•</span>
+            <a
+              href="https://github.com/eaziym/cto"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 hover:text-brand-600 transition-colors"
+            >
+              <Github className="w-4 h-4" />
+              <span>GitHub</span>
+              {githubStars !== null && githubStars > 0 && (
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-200 rounded-full text-xs font-semibold">
+                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                  {githubStars}
+                </span>
+              )}
+            </a>
           </div>
           <div className="text-center mt-4 text-xs text-gray-500">
-            © {new Date().getFullYear()} CTO. All rights reserved.
+            © {new Date().getFullYear()} CTO — Your Personal Chief Talent Officer. All rights reserved.
           </div>
         </div>
       </footer>
