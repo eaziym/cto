@@ -1,0 +1,346 @@
+import { useState } from 'react';
+import { User, Briefcase, GraduationCap, Award, ExternalLink, RefreshCw, Edit3 } from 'lucide-react';
+import type { AggregatedProfile } from '../api/client';
+import { updateAggregatedProfile } from '../api/client';
+
+interface ProfilePanelProps {
+  aggregatedProfile: AggregatedProfile | null;
+  isAggregating: boolean;
+  onProfileUpdate?: (updatedProfile: AggregatedProfile) => void;
+}
+
+function ProfilePanel({
+  aggregatedProfile,
+  isAggregating,
+  onProfileUpdate
+}: ProfilePanelProps): JSX.Element {
+  const [showAllSkills, setShowAllSkills] = useState(false);
+  const [showAllExperience, setShowAllExperience] = useState(false);
+  const [showAllEducation, setShowAllEducation] = useState(false);
+  const [showAllProjects, setShowAllProjects] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingSummary, setEditingSummary] = useState('');
+
+  const handleEditStart = () => {
+    setEditingSummary(aggregatedProfile?.summary || '');
+    setIsEditing(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!aggregatedProfile || !onProfileUpdate) return;
+
+    try {
+      const { aggregated_profile } = await updateAggregatedProfile({
+        summary: editingSummary
+      });
+      onProfileUpdate(aggregated_profile);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      // Could add error handling here
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditingSummary(aggregatedProfile?.summary || '');
+    setIsEditing(false);
+  };
+
+  if (isAggregating) {
+    return (
+      <div className="h-full bg-white flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="mx-auto mb-4 h-12 w-12 animate-spin text-blue-600" />
+          <p className="text-lg font-medium text-blue-700 mb-2">Building Your Profile</p>
+          <p className="text-sm text-blue-600">Analyzing and combining your sources...</p>
+          <p className="text-xs text-gray-500 mt-2">This may take a few seconds</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!aggregatedProfile || !aggregatedProfile.name) {
+    return (
+      <div className="h-full bg-white flex items-center justify-center p-8">
+        <div className="text-center max-w-md">
+          <User className="mx-auto mb-4 h-16 w-16 text-gray-400" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Your Profile Awaits</h3>
+          <p className="text-gray-600 mb-6">Add at least one source to generate your unified professional profile. Upload a resume, connect your LinkedIn, or add project documents to get started.</p>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                <span className="text-xs font-semibold text-blue-600">1</span>
+              </div>
+              <span>Add your sources</span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
+                <span className="text-xs font-semibold text-gray-400">2</span>
+              </div>
+              <span>Build your unified profile</span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
+                <span className="text-xs font-semibold text-gray-400">3</span>
+              </div>
+              <span>Get personalized job matches</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full bg-white flex flex-col">
+      <div className="px-4 py-3 border-b border-gray-200 h-12 flex items-center flex-shrink-0">
+        <div className="flex items-center justify-between w-full">
+          <h2 className="text-sm font-medium text-gray-900">The Complete You</h2>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-6 py-4" data-tour="aggregated-profile">
+        <div className="space-y-4">
+          {/* Contact Info */}
+          <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">{aggregatedProfile.name}</h3>
+              <User className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="space-y-2 text-sm text-gray-700">
+              {aggregatedProfile.email && (
+                <div className="flex items-center space-x-2">
+                  <span>✉️</span>
+                  <span>{aggregatedProfile.email}</span>
+                </div>
+              )}
+              {aggregatedProfile.phone && (
+                <div className="flex items-center space-x-2">
+                  <span>📱</span>
+                  <span>{aggregatedProfile.phone}</span>
+                </div>
+              )}
+              {aggregatedProfile.location && (
+                <div className="flex items-center space-x-2">
+                  <span>📍</span>
+                  <span>{aggregatedProfile.location}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Summary */}
+          {(aggregatedProfile.summary || isEditing) && (
+            <div>
+              <h4 className="mb-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Professional Summary</h4>
+              <div className="rounded-lg border border-gray-200 bg-white p-4">
+                {isEditing ? (
+                  <textarea
+                    value={editingSummary}
+                    onChange={(e) => setEditingSummary(e.target.value)}
+                    rows={4}
+                    className="w-full text-sm text-gray-600 leading-relaxed border-0 p-0 focus:ring-0 resize-none"
+                    placeholder="Add a professional summary..."
+                  />
+                ) : (
+                  <p className="text-sm text-gray-600 leading-relaxed">{aggregatedProfile.summary}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Skills */}
+          {aggregatedProfile.skills.length > 0 && (
+            <div>
+              <h4 className="mb-3 flex items-center space-x-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                <Award className="h-4 w-4" />
+                <span>Skills ({aggregatedProfile.skills.length})</span>
+              </h4>
+              <div className="rounded-lg border border-gray-200 bg-white p-4">
+                <div className="flex flex-wrap gap-2">
+                  {(showAllSkills ? aggregatedProfile.skills : aggregatedProfile.skills.slice(0, 20)).map((skill: string, idx: number) => (
+                    <span key={idx} className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700 font-medium">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+                {aggregatedProfile.skills.length > 20 && (
+                  <button
+                    onClick={() => setShowAllSkills(!showAllSkills)}
+                    className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    {showAllSkills ? '- Show less' : `+ Show all ${aggregatedProfile.skills.length} skills`}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Experience */}
+          {aggregatedProfile.experience.length > 0 && (
+            <div>
+              <h4 className="mb-3 flex items-center space-x-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                <Briefcase className="h-4 w-4" />
+                <span>Experience ({aggregatedProfile.experience.length} positions)</span>
+              </h4>
+              <div className="rounded-lg border border-gray-200 bg-white">
+                <div className="divide-y divide-gray-200">
+                  {(showAllExperience ? aggregatedProfile.experience : aggregatedProfile.experience.slice(0, 4)).map((exp: any, idx: number) => (
+                    <div key={idx} className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h5 className="font-medium text-gray-900">{exp.job_title || exp.title}</h5>
+                          <p className="text-gray-600">{exp.company}</p>
+                          {exp.duration && <p className="text-sm text-gray-500">{exp.duration}</p>}
+                          {exp.location && <p className="text-sm text-gray-500">{exp.location}</p>}
+                        </div>
+                        {exp.source && (
+                          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                            {exp.source}
+                          </span>
+                        )}
+                      </div>
+                      {exp.description && (
+                        <p className="mt-2 text-sm text-gray-600 line-clamp-2">{exp.description}</p>
+                      )}
+                      {exp.skills && exp.skills.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {exp.skills.slice(0, 5).map((skill: string, skillIdx: number) => (
+                            <span key={skillIdx} className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700">
+                              {skill}
+                            </span>
+                          ))}
+                          {exp.skills.length > 5 && (
+                            <span className="text-xs text-gray-500">+{exp.skills.length - 5} more</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {aggregatedProfile.experience.length > 4 && (
+                  <div className="p-4 border-t border-gray-200">
+                    <button
+                      onClick={() => setShowAllExperience(!showAllExperience)}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      {showAllExperience ? '- Show less' : `+ Show all ${aggregatedProfile.experience.length} positions`}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Education */}
+          {aggregatedProfile.education.length > 0 && (
+            <div>
+              <h4 className="mb-3 flex items-center space-x-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                <GraduationCap className="h-4 w-4" />
+                <span>Education ({aggregatedProfile.education.length})</span>
+              </h4>
+              <div className="rounded-lg border border-gray-200 bg-white">
+                <div className="divide-y divide-gray-200">
+                  {(showAllEducation ? aggregatedProfile.education : aggregatedProfile.education.slice(0, 3)).map((edu: any, idx: number) => (
+                    <div key={idx} className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h5 className="font-medium text-gray-900">{edu.degree || edu.field_of_study}</h5>
+                          <p className="text-gray-600">{edu.institution}</p>
+                          {edu.duration && <p className="text-sm text-gray-500">{edu.duration}</p>}
+                          {edu.gpa && <p className="text-sm text-gray-500">GPA: {edu.gpa}</p>}
+                        </div>
+                        {edu.source && (
+                          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                            {edu.source}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {aggregatedProfile.education.length > 3 && (
+                  <div className="p-4 border-t border-gray-200">
+                    <button
+                      onClick={() => setShowAllEducation(!showAllEducation)}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      {showAllEducation ? '- Show less' : `+ Show all ${aggregatedProfile.education.length} entries`}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Projects */}
+          {aggregatedProfile.projects && aggregatedProfile.projects.length > 0 && (
+            <div>
+              <h4 className="mb-3 flex items-center space-x-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                <Award className="h-4 w-4" />
+                <span>Projects ({aggregatedProfile.projects.length})</span>
+              </h4>
+              <div className="rounded-lg border border-gray-200 bg-white">
+                <div className="divide-y divide-gray-200">
+                  {(showAllProjects ? aggregatedProfile.projects : aggregatedProfile.projects.slice(0, 3)).map((project: any, idx: number) => (
+                    <div key={idx} className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between">
+                            <h5 className="font-medium text-gray-900">{project.name}</h5>
+                            {project.url && (
+                              <a
+                                href={project.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 ml-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            )}
+                          </div>
+                          {project.description && <p className="mt-1 text-sm text-gray-600">{project.description}</p>}
+                          {project.technologies && project.technologies.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {project.technologies.slice(0, 6).map((tech: string, techIdx: number) => (
+                                <span key={techIdx} className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700">
+                                  {tech}
+                                </span>
+                              ))}
+                              {project.technologies.length > 6 && (
+                                <span className="text-xs text-gray-500">+{project.technologies.length - 6} more</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {project.source && (
+                          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                            {project.source}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {aggregatedProfile.projects.length > 3 && (
+                  <div className="p-4 border-t border-gray-200">
+                    <button
+                      onClick={() => setShowAllProjects(!showAllProjects)}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      {showAllProjects ? '- Show less' : `+ Show all ${aggregatedProfile.projects.length} projects`}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+export default ProfilePanel;

@@ -568,6 +568,13 @@ export function fetchAggregatedProfile(): Promise<{ aggregated_profile: Aggregat
   return apiFetch('/knowledge-sources/aggregate', { method: 'GET' });
 }
 
+export function updateAggregatedProfile(updates: Partial<AggregatedProfile>): Promise<{ aggregated_profile: AggregatedProfile; message: string }> {
+  return apiFetch('/knowledge-sources/aggregate', {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
+}
+
 export function uploadKnowledgeDocument(file: File): Promise<{ source: KnowledgeSource; message: string }> {
   const formData = new FormData();
   formData.append('file', file);

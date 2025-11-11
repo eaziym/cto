@@ -77,22 +77,24 @@ export default function App(): JSX.Element {
       <div className="min-h-screen flex flex-col">
         {user && (
           <header className="border-b bg-white sticky top-0 z-30">
-            <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3 sm:py-4">
-              <Link to="/" className="text-lg sm:text-xl font-semibold text-brand-600 flex-shrink-0">
-                CTO
-              </Link>
-              <p className="hidden sm:block text-xs text-slate-500 ml-2">Your Personal Chief Talent Officer</p>
-              
+            <div className="flex items-center justify-between px-4 py-3 sm:py-4 w-full relative">
+              <div className="flex items-center space-x-3 flex-shrink-0">
+                <Link to="/" className="flex items-center">
+                  <img src="/android-chrome-192x192.png" alt="CTO" className="w-7 h-7 sm:w-8 sm:h-8" />
+                </Link>
+                <p className="hidden sm:block text-xs text-slate-500">Your Personal Chief Talent Officer</p>
+              </div>
+
               {/* Desktop Navigation */}
-              <nav className="hidden md:flex gap-2">
+              <nav className="hidden md:flex gap-2 absolute left-1/2 transform -translate-x-1/2">
                 <NavLink to="/knowledge-base" className={navLinkClass}>
-                  Knowledge Base
+                  You
                 </NavLink>
                 {isProfileActivated ? (
                   <>
-                    <NavLink to="/dashboard" className={navLinkClass}>
+                    {/* <NavLink to="/dashboard" className={navLinkClass}>
                       Dashboard
-                    </NavLink>
+                    </NavLink> */}
                     <NavLink to="/jobs" className={navLinkClass}>
                       Jobs
                     </NavLink>
@@ -102,9 +104,9 @@ export default function App(): JSX.Element {
                   </>
                 ) : (
                   <>
-                    <span data-tour="locked-navigation" className={lockedNavLinkClass()} title="Complete onboarding to unlock">
+                    {/* <span data-tour="locked-navigation" className={lockedNavLinkClass()} title="Complete onboarding to unlock">
                       Dashboard
-                    </span>
+                    </span> */}
                     <span className={lockedNavLinkClass()} title="Complete onboarding to unlock">
                       Jobs
                     </span>
@@ -155,11 +157,11 @@ export default function App(): JSX.Element {
                     }
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    Knowledge Base
+                    You
                   </NavLink>
                   {isProfileActivated ? (
                     <>
-                      <NavLink
+                      {/* <NavLink
                         to="/dashboard"
                         className={({ isActive }) =>
                           `block px-3 py-2 rounded-md text-base font-medium ${
@@ -171,7 +173,7 @@ export default function App(): JSX.Element {
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Dashboard
-                      </NavLink>
+                      </NavLink> */}
                       <NavLink
                         to="/jobs"
                         className={({ isActive }) =>
@@ -201,9 +203,9 @@ export default function App(): JSX.Element {
                     </>
                   ) : (
                     <>
-                      <span className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 cursor-not-allowed">
+                      {/* <span className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 cursor-not-allowed">
                         Dashboard
-                      </span>
+                      </span> */}
                       <span className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 cursor-not-allowed">
                         Jobs
                       </span>
@@ -236,14 +238,15 @@ export default function App(): JSX.Element {
                 </ProtectedRoute>
               }
             />
-            <Route
+            {/* Dashboard temporarily commented out */}
+            {/* <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
                   <DashboardPage />
                 </ProtectedRoute>
               }
-            />
+            /> */}
             <Route
               path="/jobs"
               element={
@@ -271,8 +274,8 @@ export default function App(): JSX.Element {
           </Routes>
         </main>
         {user && (
-          <footer className="border-t bg-white">
-            <div className="mx-auto max-w-6xl px-6 py-4 text-sm text-slate-500">
+          <footer className="border-t bg-white flex-shrink-0">
+            <div className="px-4 py-2 text-sm text-slate-500 w-full">
               &copy; {new Date().getFullYear()} CTO — Your Personal Chief Talent Officer.
             </div>
           </footer>

@@ -1,4 +1,5 @@
-import { Briefcase, MapPin, Building2, DollarSign, Clock } from 'lucide-react';
+import { Briefcase, MapPin, Building2, DollarSign, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState } from 'react';
 
 interface JobHeaderProps {
   title: string;
@@ -8,6 +9,7 @@ interface JobHeaderProps {
   salary?: string;
   postedDate?: string;
   isInternSG?: boolean;
+  description?: string;
 }
 
 export default function JobHeader({ 
@@ -17,8 +19,16 @@ export default function JobHeader({
   tags, 
   salary,
   postedDate,
-  isInternSG 
+  isInternSG,
+  description 
 }: JobHeaderProps) {
+  const [expanded, setExpanded] = useState(false);
+  
+  // Get preview of description (first 200 chars)
+  const previewText = description 
+    ? description.replace(/<[^>]*>/g, '').slice(0, 200) + '...'
+    : '';
+
   return (
     <div className="rounded-3xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-8 shadow-card">
       {isInternSG && (
@@ -55,7 +65,7 @@ export default function JobHeader({
         )}
       </div>
       
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 mb-4">
         {tags.map((tag, idx) => (
           <span
             key={idx}
@@ -65,6 +75,51 @@ export default function JobHeader({
           </span>
         ))}
       </div>
+
+      {/* Collapsible Job Description */}
+      {description && (
+        <div className="mt-6 pt-6 border-t border-slate-200">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center justify-between w-full text-left group"
+          >
+            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+              Job Description
+            </h3>
+            {expanded ? (
+              <ChevronUp className="h-5 w-5 text-slate-400 group-hover:text-slate-600 transition" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-slate-400 group-hover:text-slate-600 transition" />
+            )}
+          </button>
+          
+          <div className={`mt-3 overflow-hidden transition-all ${expanded ? 'max-h-[2000px]' : 'max-h-20'}`}>
+            <div 
+              className="text-sm leading-relaxed text-slate-600"
+              dangerouslySetInnerHTML={{ 
+                __html: description
+                  .replace(/^#{1,3}\s+(.+)$/gm, '<h3 class="text-base font-bold text-slate-900 mt-6 mb-3">$1</h3>')
+                  .replace(/^([^:\n]+):$/gm, '<p class="font-semibold text-slate-900 mt-4 mb-2">$1:</p>')
+                  .split('\n\n')
+                  .map(para => {
+                    if (para.trim().startsWith('<')) return para;
+                    return `<p class="mb-4">${para.replace(/\n/g, '<br />')}</p>`;
+                  })
+                  .join('')
+              }}
+            />
+          </div>
+          
+          <div className="mt-3">
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="text-sm font-medium text-brand-600 hover:text-brand-700"
+            >
+              {expanded ? '← Collapse' : 'Read more →'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

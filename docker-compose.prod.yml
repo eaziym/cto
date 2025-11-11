@@ -1,0 +1,22 @@
+services:
+  cto-api:
+    image: cto-api:latest
+    container_name: cto-api
+    restart: unless-stopped
+    env_file:
+      - api/.env
+    environment:
+      - PORT=8080
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  cto-web:
+    image: cto-web:latest
+    container_name: cto-web
+    restart: unless-stopped
+    depends_on:
+      - cto-api

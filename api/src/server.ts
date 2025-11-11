@@ -481,9 +481,9 @@ export async function buildServer(): Promise<express.Express> {
           }
           
           // Check job industry matches
-          if (industries.some(industry => 
-            industry.toLowerCase().includes(job.industry.toLowerCase()) || 
-            job.industry.toLowerCase().includes(industry.toLowerCase())
+          if (job.industry && industries.some(industry => 
+            industry.toLowerCase().includes(job.industry!.toLowerCase()) || 
+            job.industry!.toLowerCase().includes(industry.toLowerCase())
           )) {
             matchCount++;
           }
@@ -653,7 +653,6 @@ export async function buildServer(): Promise<express.Express> {
         gaps: existingAssessment.gaps as any,
         questions_for_interview: existingAssessment.questions_for_interview as string[],
         recommendations_to_candidate: existingAssessment.recommendations_to_candidate as string[],
-        compass_score: existingAssessment.compass_score as any,
         from_cache: true
       });
     } catch (error) {
@@ -710,7 +709,6 @@ export async function buildServer(): Promise<express.Express> {
             gaps: existingAssessment.gaps as any,
             questions_for_interview: existingAssessment.questions_for_interview as string[],
             recommendations_to_candidate: existingAssessment.recommendations_to_candidate as string[],
-            compass_score: existingAssessment.compass_score as any, // Include stored COMPASS score
             from_cache: true
           });
           return;
@@ -803,33 +801,6 @@ export async function buildServer(): Promise<express.Express> {
       // Parse the comprehensive assessment
       const assessment = JSON.parse(response.output_text);
       
-      // Also calculate COMPASS score with the detailed JD using LLM
-      const userProfile: Partial<User> = {
-        id: req.user!.id,
-        name: knowledgeBase.name || 'Candidate',
-        educationLevel: knowledgeBase.education?.[0]?.degree?.includes('Master') ? 'Masters' : 
-                       knowledgeBase.education?.[0]?.degree?.includes('PhD') ? 'PhD' :
-                       knowledgeBase.education?.[0]?.degree?.includes('Bachelor') ? 'Bachelors' : 'Diploma',
-        educationInstitution: knowledgeBase.education?.[0]?.institution,
-        certifications: knowledgeBase.certifications?.map((c: any) => c.name || c),
-        yearsExperience: knowledgeBase.experience?.length || 0,
-        skills: knowledgeBase.skills || [],
-        expectedSalarySGD: undefined,
-        plan: 'freemium'
-      };
-
-      const compassScore = await scoreCompassWithLLM({
-        user: userProfile,
-        job: {
-          title: roleTemplate.title,
-          company: job.company,
-          location: job.location,
-          industry: roleTemplate.industry,
-          requirements: roleTemplate.requirements,
-          description: roleTemplate.description
-        }
-      });
-      
       // Save to database (without resume_analysis_id since we're using knowledge_base_summary)
       const { data: savedAssessment, error: saveError } = await supabaseAdmin
         .from('job_assessments')
@@ -850,8 +821,7 @@ export async function buildServer(): Promise<express.Express> {
           gaps: assessment.gaps,
           questions_for_interview: assessment.questions_for_interview,
           recommendations_to_candidate: assessment.recommendations_to_candidate,
-          notes: assessment.notes,
-          compass_score: compassScore // Store the recalculated COMPASS score
+          notes: assessment.notes
         }, {
           onConflict: 'user_id,job_external_id'
         })
@@ -864,7 +834,6 @@ export async function buildServer(): Promise<express.Express> {
 
       res.json({
         ...assessment,
-        compass_score: compassScore, // Include the recalculated COMPASS score
         from_cache: false
       });
     } catch (error) {

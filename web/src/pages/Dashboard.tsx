@@ -119,7 +119,7 @@ export default function DashboardPage(): JSX.Element {
 
   if (loadingSources) {
     return (
-      <div className="mx-auto max-w-6xl px-6 py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-12">
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-600 border-r-transparent"></div>
@@ -131,7 +131,7 @@ export default function DashboardPage(): JSX.Element {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-12">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-12">
       {/* Header */}
       <div className="mb-8">
         <h2 className="text-3xl font-semibold text-slate-900">Dashboard</h2>

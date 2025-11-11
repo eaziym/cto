@@ -44,12 +44,16 @@ export default function Modal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4"
       role="dialog"
       aria-modal="true"
+      onClick={onClose}
     >
-      <div className={`overflow-hidden rounded-2xl bg-white shadow-2xl ${
-        fullScreen 
-          ? 'max-h-[95vh] w-full max-w-7xl' 
-          : 'max-h-[90vh] w-full max-w-3xl'
-      }`}>
+      <div
+        className={`overflow-hidden rounded-2xl bg-white shadow-2xl ${
+          fullScreen
+            ? 'max-h-[95vh] w-full max-w-7xl'
+            : 'max-h-[90vh] w-full max-w-3xl'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-4">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
