@@ -227,13 +227,27 @@ Deno.serve(async (req) => {
           console.log('[SAVE] Experience count:', aggregatedProfile.experience?.length);
           console.log('[SAVE] Projects count:', aggregatedProfile.projects?.length);
           
+          // Combine all skills for the profile.skills field (used for navigation unlock)
+          const allSkills = [
+            ...(aggregatedProfile.skills || []),
+            ...(aggregatedProfile.technical_skills || []),
+            ...(aggregatedProfile.soft_skills || []),
+          ];
+          const uniqueSkills = [...new Set(allSkills)];
+          
+          // Use UPSERT to create profile if it doesn't exist yet (for new users)
           const { data: savedData, error: updateError } = await supabase
             .from('profiles')
-            .update({
+            .upsert({
+              id: user.id, // Primary key for upsert
               knowledge_base_summary: aggregatedProfile,
               knowledge_base_updated_at: now,
+              skills: uniqueSkills, // Update skills to unlock navigation
+              name: aggregatedProfile.name || 'User', // Update name if available, default to 'User'
+              plan: 'freemium', // Default plan for new users
+            }, {
+              onConflict: 'id', // Upsert based on user ID
             })
-            .eq('id', user.id)
             .select();
 
           if (updateError) {

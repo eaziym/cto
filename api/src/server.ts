@@ -588,7 +588,8 @@ export async function buildServer(): Promise<express.Express> {
         },
         createdAt: jdData?.postedAt || job.date,
         url: job.url,
-        applyUrl: jdData?.applyUrl || job.url,
+        // For Google, use the clean job.url instead of the encoded applyUrl
+        applyUrl: job.company.toLowerCase().includes('google') ? job.url : (jdData?.applyUrl || job.url),
         score: score.total,
         scoreRaw: score.totalRaw,
         epIndicator: score.verdict,
