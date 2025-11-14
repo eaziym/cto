@@ -24,9 +24,9 @@ export default function JobHeader({
 }: JobHeaderProps) {
   const [expanded, setExpanded] = useState(false);
   
-  // Get preview of description (first 200 chars)
-  const previewText = description 
-    ? description.replace(/<[^>]*>/g, '').slice(0, 200) + '...'
+  // Get preview of description (first 300 chars) and strip HTML
+  const previewText = description
+    ? description.replace(/<[^>]*>/g, '').slice(0, 300)
     : '';
 
   return (
@@ -76,7 +76,7 @@ export default function JobHeader({
         ))}
       </div>
 
-      {/* Collapsible Job Description */}
+      {/* Collapsible Job Description - render a plain preview when collapsed to avoid clipping issues */}
       {description && (
         <div className="mt-6 pt-6 border-t border-slate-200">
           <button
@@ -92,24 +92,32 @@ export default function JobHeader({
               <ChevronDown className="h-5 w-5 text-slate-400 group-hover:text-slate-600 transition" />
             )}
           </button>
-          
-          <div className={`mt-3 overflow-hidden transition-all ${expanded ? 'max-h-[2000px]' : 'max-h-20'}`}>
-            <div 
-              className="text-sm leading-relaxed text-slate-600"
-              dangerouslySetInnerHTML={{ 
-                __html: description
-                  .replace(/^#{1,3}\s+(.+)$/gm, '<h3 class="text-base font-bold text-slate-900 mt-6 mb-3">$1</h3>')
-                  .replace(/^([^:\n]+):$/gm, '<p class="font-semibold text-slate-900 mt-4 mb-2">$1:</p>')
-                  .split('\n\n')
-                  .map(para => {
-                    if (para.trim().startsWith('<')) return para;
-                    return `<p class="mb-4">${para.replace(/\n/g, '<br />')}</p>`;
-                  })
-                  .join('')
-              }}
-            />
+
+          <div className="mt-3">
+            {!expanded ? (
+              // When collapsed, render a sanitized preview paragraph and clamp lines.
+              <p className="text-sm leading-relaxed text-slate-600 line-clamp-4">
+                {previewText}{previewText.length === 300 ? '...' : ''}
+              </p>
+            ) : (
+              // When expanded, render the full rich HTML description.
+              <div 
+                className="text-sm leading-relaxed text-slate-600"
+                dangerouslySetInnerHTML={{ 
+                  __html: description
+                    .replace(/^#{1,3}\s+(.+)$/gm, '<h3 class="text-base font-bold text-slate-900 mt-6 mb-3">$1</h3>')
+                    .replace(/^([^:\n]+):$/gm, '<p class="font-semibold text-slate-900 mt-4 mb-2">$1:</p>')
+                    .split('\n\n')
+                    .map(para => {
+                      if (para.trim().startsWith('<')) return para;
+                      return `<p class="mb-4">${para.replace(/\n/g, '<br />')}</p>`;
+                    })
+                    .join('')
+                }}
+              />
+            )}
           </div>
-          
+
           <div className="mt-3">
             <button
               onClick={() => setExpanded(!expanded)}

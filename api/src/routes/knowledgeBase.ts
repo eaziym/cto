@@ -19,7 +19,6 @@ import { scrapeAndParseGitHub, extractGitHubUsername } from '../knowledge/github
 import { scrapeAndParseWebsite } from '../knowledge/website.js';
 import { analyzeResume } from '../resume/analyzer.js';
 import { extract_resume_info, extract_project_info } from '../resume/llm_analyzer.js';
-import { aggregateKnowledgeBase, saveAggregatedKnowledgeBase, getAggregatedKnowledgeBase } from '../knowledge/aggregator.js';
 import { supabaseAdmin } from '../supabase.js';
 import type { ParsedKnowledgeData } from '../knowledge/types.js';
 
@@ -30,22 +29,10 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 // HELPER FUNCTIONS
 // ============================================================================
 
-/**
- * Trigger background aggregation after a source is added/updated/deleted
- */
-function triggerBackgroundAggregation(userId: string, context: string): void {
-  logger.info(`[${context}] Starting background aggregation for user ${userId}`);
-  aggregateKnowledgeBase(userId)
-    .then(knowledgeBase => {
-      logger.info(`[${context}] Aggregation completed, saving for user ${userId}. Sources in profile: ${knowledgeBase.sources?.length || 0}`);
-      return saveAggregatedKnowledgeBase(userId, knowledgeBase);
-    })
-    .then(() => logger.info(`[${context}] ✅ Background aggregation completed and saved for user ${userId}`))
-    .catch(error => {
-      logger.error(`[${context}] ❌ Background aggregation failed for user ${userId}:`, error);
-      logger.error(`[${context}] Error stack:`, error.stack);
-    });
-}
+// NOTE: Background aggregation has been removed in favor of the streaming
+// edge function (aggregate-profile-stream) which is triggered on-demand by
+// the frontend. This prevents duplicate aggregations and allows real-time
+// streaming updates to the UI.
 
 // ============================================================================
 // SCHEMAS
@@ -106,27 +93,13 @@ router.get('/aggregate', requireAuth, async (req: Request, res: Response) => {
       .eq('id', userId)
       .single();
     
-    let knowledgeBase = data?.knowledge_base_summary;
+    const knowledgeBase = data?.knowledge_base_summary;
     const updatedAt = data?.knowledge_base_updated_at;
     
     logger.info(`[GET AGGREGATE] Retrieved profile for user ${userId}: ${knowledgeBase?.sources?.length || 0} sources, updated at ${updatedAt}`);
     
-    // If no cache exists, generate it once
-    if (!knowledgeBase) {
-      logger.info('No cached aggregated profile, generating new one');
-      knowledgeBase = await aggregateKnowledgeBase(userId);
-      await saveAggregatedKnowledgeBase(userId, knowledgeBase);
-      
-      // Fetch the updated timestamp
-      const { data: freshData } = await supabaseAdmin
-        .from('profiles')
-        .select('knowledge_base_updated_at')
-        .eq('id', userId)
-        .single();
-      
-      knowledgeBase.updated_at = freshData?.knowledge_base_updated_at;
-    } else {
-      // Add the updated_at timestamp to the response
+    // Add the updated_at timestamp to the response if profile exists
+    if (knowledgeBase && updatedAt) {
       knowledgeBase.updated_at = updatedAt;
     }
     
@@ -261,10 +234,7 @@ async function processResumeDocument(sourceId: string, userId: string, file: Exp
       })
       .eq('id', sourceId);
     
-    logger.info(`[UPLOAD] Marked source ${sourceId} as completed, starting background aggregation...`);
-    
-    // Aggregate knowledge base in background
-    triggerBackgroundAggregation(userId, 'UPLOAD');
+    logger.info(`[UPLOAD] Marked source ${sourceId} as completed`);
   } catch (error) {
     logger.error(`[UPLOAD] Processing failed for source ${sourceId}:`, error);
     await markSourceAsFailed(sourceId, error instanceof Error ? error.message : 'Unknown error');
@@ -332,10 +302,7 @@ async function processProjectDocument(sourceId: string, userId: string, file: Ex
       })
       .eq('id', sourceId);
     
-    logger.info(`[UPLOAD_PROJECT] Marked source ${sourceId} as completed, starting background aggregation...`);
-    
-    // Aggregate knowledge base in background
-    triggerBackgroundAggregation(userId, 'UPLOAD_PROJECT');
+    logger.info(`[UPLOAD_PROJECT] Marked source ${sourceId} as completed`);
   } catch (error) {
     logger.error(`[UPLOAD_PROJECT] Processing failed for source ${sourceId}:`, error);
     await markSourceAsFailed(sourceId, error instanceof Error ? error.message : 'Unknown error');
@@ -412,9 +379,6 @@ async function processLinkedInProfile(sourceId: string, userId: string, url: str
     await markSourceAsCompleted(sourceId, parsed, raw);
     
     logger.info(`Successfully processed LinkedIn profile for source ${sourceId}`);
-    
-    // Aggregate knowledge base in background
-    triggerBackgroundAggregation(userId, 'LINKEDIN');
   } catch (error) {
     await markSourceAsFailed(sourceId, error instanceof Error ? error.message : 'Unknown error');
     throw error;
@@ -465,9 +429,6 @@ async function processGitHubProfile(sourceId: string, userId: string, username: 
     await markSourceAsCompleted(sourceId, parsed, raw);
     
     logger.info(`Successfully processed GitHub profile for source ${sourceId}`);
-    
-    // Aggregate knowledge base in background
-    triggerBackgroundAggregation(userId, 'GITHUB');
   } catch (error) {
     await markSourceAsFailed(sourceId, error instanceof Error ? error.message : 'Unknown error');
     throw error;
@@ -517,9 +478,6 @@ async function processWebsite(sourceId: string, userId: string, url: string): Pr
     await markSourceAsCompleted(sourceId, parsed, raw);
     
     logger.info(`Successfully processed website for source ${sourceId}`);
-    
-    // Aggregate knowledge base in background
-    triggerBackgroundAggregation(userId, 'WEBSITE');
   } catch (error) {
     await markSourceAsFailed(sourceId, error instanceof Error ? error.message : 'Unknown error');
     throw error;
@@ -556,9 +514,6 @@ router.post('/text', requireAuth, async (req: Request, res: Response) => {
       source,
       message: 'Manual context added successfully',
     });
-    
-    // Aggregate knowledge base in background
-    triggerBackgroundAggregation(userId, 'MANUAL_TEXT');
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Invalid request', details: error.errors });
@@ -585,9 +540,6 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
     
     // Respond immediately
     res.json({ message: 'Knowledge source deleted successfully' });
-    
-    // Re-aggregate knowledge base in background (don't await - let it finish async)
-    triggerBackgroundAggregation(userId, 'DELETE');
   } catch (error) {
     logger.error('Failed to delete knowledge source:', error);
     res.status(500).json({

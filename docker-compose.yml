@@ -1,5 +1,8 @@
 version: '3.9'
 
+# For production builds, explicitly specify .env file to avoid .env.local
+# Usage: docker-compose --env-file .env build
+
 services:
   api:
     build:

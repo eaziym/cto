@@ -33,24 +33,24 @@ export async function predictPreferences(
     
     // Prepare knowledge base summary for LLM
     const knowledgeSummary = {
-      skills: knowledgeBase.skills.slice(0, 30), // Top 30 skills
-      experience: knowledgeBase.experience.slice(0, 5).map((exp) => ({
+      skills: (knowledgeBase.skills || []).slice(0, 30), // Top 30 skills
+      experience: (knowledgeBase.experience || []).slice(0, 5).map((exp) => ({
         job_title: exp.job_title,
         company: exp.company,
         duration: exp.duration,
-        description: exp.description.slice(0, 200), // Truncate
+        description: exp.description?.slice(0, 200) || '', // Truncate
       })),
-      education: knowledgeBase.education.map((edu) => ({
+      education: (knowledgeBase.education || []).map((edu) => ({
         institution: edu.institution,
         degree: edu.degree,
         field_of_study: edu.field_of_study,
       })),
-      projects: knowledgeBase.projects.slice(0, 5).map((proj) => ({
+      projects: (knowledgeBase.projects || []).slice(0, 5).map((proj) => ({
         name: proj.name,
-        description: proj.description.slice(0, 150),
-        technologies: proj.technologies,
+        description: proj.description?.slice(0, 150) || '',
+        technologies: proj.technologies || [],
       })),
-      certifications: knowledgeBase.certifications.map((cert) => ({
+      certifications: (knowledgeBase.certifications || []).map((cert) => ({
         name: cert.name,
         issuer: cert.issuer,
       })),

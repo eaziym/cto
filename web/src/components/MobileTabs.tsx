@@ -3,6 +3,8 @@ import SourcesPanel from './SourcesPanel';
 import ProfilePanel from './ProfilePanel';
 import PreferencesPanel from './PreferencesPanel';
 import type { KnowledgeSource, AggregatedProfile, UserPreferences } from '../api/client';
+import type { StreamProgress } from '../hooks/useResumeStream';
+import type { AggregateProgress } from '../hooks/useAggregateStream';
 
 interface MobileTabsProps {
   // Sources tab props
@@ -13,6 +15,7 @@ interface MobileTabsProps {
   // Profile tab props
   aggregatedProfile: AggregatedProfile | null;
   isAggregating: boolean;
+  aggregateProgress?: AggregateProgress;
   onReanalyze: () => void;
   isProcessing: boolean;
   canNavigateToDashboard: boolean;
@@ -22,6 +25,10 @@ interface MobileTabsProps {
   onPredictPreferences: () => void;
   onUpdatePreferences: (updates: Partial<UserPreferences>) => void;
   completedSourcesCount: number;
+
+  // Streaming props
+  streamingSourceId?: string | null;
+  streamingProgress?: StreamProgress | null;
 
   // Onboarding tour props
   isTourActive?: boolean;
@@ -34,6 +41,7 @@ function MobileTabs({
   onDeleteSource,
   aggregatedProfile,
   isAggregating,
+  aggregateProgress,
   onReanalyze,
   isProcessing,
   canNavigateToDashboard,
@@ -41,6 +49,8 @@ function MobileTabs({
   onPredictPreferences,
   onUpdatePreferences,
   completedSourcesCount,
+  streamingSourceId,
+  streamingProgress,
   isTourActive = false,
   tourTab
 }: MobileTabsProps): JSX.Element {
@@ -53,27 +63,57 @@ function MobileTabs({
     preferences.predicted_companies
   );
 
-  // Progressive disclosure: determine active tab based on completion
-  let activeTab = 1; // Default to sources
+  // Track if we're currently streaming
+  const isStreaming = streamingSourceId && streamingProgress && streamingProgress.status !== 'idle' && streamingProgress.status !== 'complete';
 
-  if (!hasCompletedSources) {
-    activeTab = 1; // Stay on sources until at least one is completed
-  } else if (!hasProfile && !isAggregating) {
-    activeTab = 2; // Move to profile once sources are ready
-  } else if (hasProfile && !hasPreferences) {
-    activeTab = 3; // Move to preferences once profile is ready
-  } else if (hasProfile && hasPreferences) {
-    activeTab = 2; // Can access all tabs, default to profile
-  }
+  // Initialize tab state - check sessionStorage first, then default to 1
+  const [currentTab, setCurrentTab] = React.useState(() => {
+    const saved = sessionStorage.getItem('mobileCurrentTab');
+    return saved ? parseInt(saved, 10) : 1;
+  });
 
-  const [currentTab, setCurrentTab] = React.useState(activeTab);
+  // Persist tab changes to sessionStorage
+  const handleSetCurrentTab = (tab: number) => {
+    setCurrentTab(tab);
+    sessionStorage.setItem('mobileCurrentTab', tab.toString());
+  };
 
   // Update tab when tour is active and tourTab changes
   React.useEffect(() => {
     if (isTourActive && tourTab) {
-      setCurrentTab(tourTab);
+      handleSetCurrentTab(tourTab);
     }
   }, [isTourActive, tourTab]);
+
+  // Track the previous streaming status to detect when it transitions to complete
+  const prevStreamingStatusRef = React.useRef<string | undefined>();
+  
+  // When streaming completes, switch to profile tab
+  React.useEffect(() => {
+    const currentStatus = streamingProgress?.status;
+    const prevStatus = prevStreamingStatusRef.current;
+    
+    // Only switch if streaming just completed (transitioned from non-complete to complete)
+    if (
+      currentStatus === 'complete' && 
+      prevStatus && 
+      prevStatus !== 'idle' && 
+      prevStatus !== 'complete' &&
+      currentTab === 1
+    ) {
+      // Wait a moment for the UI to update, then switch to profile tab
+      const timer = setTimeout(() => {
+        handleSetCurrentTab(2);
+      }, 500);
+      
+      // Update ref for next comparison
+      prevStreamingStatusRef.current = currentStatus;
+      return () => clearTimeout(timer);
+    }
+    
+    // Update ref
+    prevStreamingStatusRef.current = currentStatus;
+  }, [streamingProgress?.status, currentTab]);
 
   // Tab navigation with progressive disclosure
   const canAccessTab = (tabNumber: number): boolean => {
@@ -99,7 +139,7 @@ function MobileTabs({
 
   const handleTabClick = (tabNumber: number) => {
     if (canAccessTab(tabNumber)) {
-      setCurrentTab(tabNumber);
+      handleSetCurrentTab(tabNumber);
     }
   };
 
@@ -148,6 +188,8 @@ function MobileTabs({
             onDeleteSource={onDeleteSource}
             isCollapsed={false}
             onToggleCollapse={() => {}}
+            streamingSourceId={streamingSourceId}
+            streamingProgress={streamingProgress}
           />
         )}
 
@@ -155,6 +197,7 @@ function MobileTabs({
           <ProfilePanel
             aggregatedProfile={aggregatedProfile}
             isAggregating={isAggregating}
+            aggregateProgress={aggregateProgress}
           />
         )}
 

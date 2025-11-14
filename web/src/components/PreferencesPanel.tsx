@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, ChevronRight, ChevronDown, CheckCircle2, ArrowRight, User, Briefcase } from 'lucide-react';
 import type { UserPreferences } from '../api/client';
@@ -207,6 +207,11 @@ function PreferenceSelector({
 }: PreferenceSelectorProps): JSX.Element {
   const [selectedItems, setSelectedItems] = useState<string[]>(confirmed || []);
   const [isExpanded, setIsExpanded] = useState(true);
+
+  // Sync local state when confirmed prop changes (e.g., after regeneration)
+  useEffect(() => {
+    setSelectedItems(confirmed || []);
+  }, [confirmed]);
 
   const toggleItem = (itemName: string) => {
     const newSelected = selectedItems.includes(itemName)

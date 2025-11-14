@@ -56,13 +56,35 @@ pnpm -w lint    # Type-level linting via tsc --noEmit
 
 ## Deployment
 
-For production deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+For detailed production deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
-Quick summary:
-- Build Docker images with `--platform linux/amd64` for cloud servers
-- Configure environment variables for your domain
-- Set up reverse proxy (Caddy or Nginx)
-- Update Supabase authentication URLs
+### Production Build Process
+
+```bash
+# 1. Build Docker images for AMD64 (most cloud servers)
+docker build --platform linux/amd64 -t cto-api:latest -f api/Dockerfile .
+docker build --platform linux/amd64 -t cto-web:latest -f web/Dockerfile .
+
+# 2. Save and transfer to server
+docker save cto-api:latest | gzip > cto-api.tar.gz
+docker save cto-web:latest | gzip > cto-web.tar.gz
+scp *.tar.gz user@your-server:~/
+
+# 3. On server: load and start
+docker load < cto-api.tar.gz
+docker load < cto-web.tar.gz
+docker compose up -d
+```
+
+### Important Configuration
+
+- **Platform compatibility**: Always use `--platform linux/amd64` for production servers (especially when building on Apple Silicon)
+- **Environment variables**: Must be configured on the server (`.env` file) - NOT bundled in images
+- **Reverse proxy**: Connect containers to your Caddy/Nginx network
+- **Production logging**: Console logs are automatically stripped from production builds
+- **Supabase config**: Update Site URL and Redirect URLs in Supabase dashboard
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete setup instructions, reverse proxy configuration, and troubleshooting.
 
 ## Feature tour
 

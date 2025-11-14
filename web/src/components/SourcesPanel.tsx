@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Plus, Trash2, RefreshCw, CheckCircle, XCircle, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, FileText, User, Briefcase, GraduationCap, Award } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, CheckCircle, XCircle, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, FileText, User, Briefcase, GraduationCap, Award, Github, Linkedin, FolderOpen } from 'lucide-react';
 import type { KnowledgeSource } from '../api/client';
+import type { StreamProgress } from '../hooks/useResumeStream';
 
 interface SourcesPanelProps {
   sources: KnowledgeSource[];
@@ -8,6 +9,8 @@ interface SourcesPanelProps {
   onDeleteSource: (id: string) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  streamingSourceId?: string | null;
+  streamingProgress?: StreamProgress | null;
 }
 
 function SourcesPanel({
@@ -15,7 +18,9 @@ function SourcesPanel({
   onAddSource,
   onDeleteSource,
   isCollapsed,
-  onToggleCollapse
+  onToggleCollapse,
+  streamingSourceId,
+  streamingProgress,
 }: SourcesPanelProps): JSX.Element {
   const completedSources = sources.filter((s) => s.processing_status === 'completed');
   const processingSources = sources.filter((s) => s.processing_status === 'processing' || s.processing_status === 'pending');
@@ -43,13 +48,13 @@ function SourcesPanel({
 
           {sources.map((source) => {
             const sourceTypeIcons = {
-              resume: <User className="h-4 w-4" />,
-              linkedin: <User className="h-4 w-4" />,
-              github: <User className="h-4 w-4" />,
+              resume: <FileText className="h-4 w-4" />,
+              linkedin: <Linkedin className="h-4 w-4" />,
+              github: <Github className="h-4 w-4" />,
               personal_website: <FileText className="h-4 w-4" />,
               manual_text: <FileText className="h-4 w-4" />,
-              project_document: <FileText className="h-4 w-4" />,
-              portfolio: <FileText className="h-4 w-4" />,
+              project_document: <FolderOpen className="h-4 w-4" />,
+              portfolio: <FolderOpen className="h-4 w-4" />,
               other_document: <FileText className="h-4 w-4" />,
             };
 
@@ -116,7 +121,13 @@ function SourcesPanel({
         ) : (
           <div className="space-y-3">
             {sources.map((source) => (
-              <SourceCard key={source.id} source={source} onDelete={onDeleteSource} />
+              <SourceCard 
+                key={source.id} 
+                source={source} 
+                onDelete={onDeleteSource}
+                isStreaming={source.id === streamingSourceId}
+                streamingProgress={source.id === streamingSourceId ? streamingProgress : undefined}
+              />
             ))}
           </div>
         )}
@@ -125,7 +136,17 @@ function SourcesPanel({
   );
 }
 
-function SourceCard({ source, onDelete }: { source: KnowledgeSource; onDelete: (id: string) => void }) {
+function SourceCard({ 
+  source, 
+  onDelete,
+  isStreaming = false,
+  streamingProgress,
+}: { 
+  source: KnowledgeSource; 
+  onDelete: (id: string) => void;
+  isStreaming?: boolean;
+  streamingProgress?: StreamProgress | null;
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const statusIcons = {
@@ -169,6 +190,234 @@ function SourceCard({ source, onDelete }: { source: KnowledgeSource; onDelete: (
               <span>{new Date(source.created_at).toLocaleDateString()}</span>
               <span className="capitalize">{source.processing_status}</span>
             </div>
+
+            {/* Show streaming progress if actively streaming */}
+            {isStreaming && streamingProgress && streamingProgress.status !== 'idle' && (
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center space-x-2 text-xs">
+                  <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
+                  <span className="text-blue-600 font-medium">
+                    {streamingProgress.message || (
+                      <>
+                        {streamingProgress.status === 'uploading' && 'Extracting text...'}
+                        {streamingProgress.status === 'fetching' && 'Fetching profile (30-60s)...'}
+                        {streamingProgress.status === 'parsing' && (streamingProgress.streamedText ? 'Parsing fields...' : 'Analyzing...')}
+                        {streamingProgress.status === 'complete' && 'Complete!'}
+                      </>
+                    )}
+                  </span>
+                </div>
+                
+                {/* Parse and display streaming JSON progressively */}
+                {streamingProgress.streamedText && (() => {
+                  const text = streamingProgress.streamedText;
+                  
+                  // Extract fields using regex - more stable than trying to fix broken JSON
+                  const extractField = (fieldName: string) => {
+                    const match = text.match(new RegExp(`"${fieldName}"\\s*:\\s*"([^"]*)"`, 's'));
+                    return match ? match[1] : null;
+                  };
+                  
+                  const extractArray = (fieldName: string) => {
+                    // Find the start of the array
+                    const arrayStartRegex = new RegExp(`"${fieldName}"\\s*:\\s*\\[`);
+                    const arrayStartMatch = text.match(arrayStartRegex);
+                    if (!arrayStartMatch) return [];
+                    
+                    const startIndex = text.indexOf(arrayStartMatch[0]) + arrayStartMatch[0].length;
+                    const remainingText = text.substring(startIndex);
+                    
+                    const items: any[] = [];
+                    
+                    // For skills (simple string array) - only match complete items
+                    if (fieldName === 'skills' || fieldName === 'technical_skills') {
+                      // Match quoted strings followed by comma or closing bracket
+                      const stringMatches = remainingText.matchAll(/"([^"]+)"(?=\s*[,\]])/g);
+                      for (const match of stringMatches) {
+                        items.push(match[1]);
+                      }
+                    } else {
+                      // For objects (experience, education, projects) - extract complete objects
+                      // We need to handle nested braces properly
+                      let braceCount = 0;
+                      let currentObj = '';
+                      let inString = false;
+                      let escapeNext = false;
+                      
+                      for (let i = 0; i < remainingText.length; i++) {
+                        const char = remainingText[i];
+                        
+                        if (escapeNext) {
+                          currentObj += char;
+                          escapeNext = false;
+                          continue;
+                        }
+                        
+                        if (char === '\\') {
+                          escapeNext = true;
+                          currentObj += char;
+                          continue;
+                        }
+                        
+                        if (char === '"') {
+                          inString = !inString;
+                          currentObj += char;
+                          continue;
+                        }
+                        
+                        if (!inString) {
+                          if (char === '{') {
+                            if (braceCount === 0) {
+                              currentObj = char;
+                            } else {
+                              currentObj += char;
+                            }
+                            braceCount++;
+                          } else if (char === '}') {
+                            currentObj += char;
+                            braceCount--;
+                            if (braceCount === 0 && currentObj) {
+                              // We have a complete object
+                              try {
+                                const parsed = JSON.parse(currentObj);
+                                items.push(parsed);
+                                currentObj = '';
+                              } catch {
+                                // Skip invalid JSON
+                              }
+                            }
+                          } else if (braceCount > 0) {
+                            currentObj += char;
+                          } else if (char === ']') {
+                            // End of array
+                            break;
+                          }
+                        } else {
+                          currentObj += char;
+                        }
+                      }
+                    }
+                    
+                    return items;
+                  };
+                  
+                  const name = extractField('name');
+                  const email = extractField('email');
+                  const phone = extractField('phone') || extractField('telephone');
+                  const location = extractField('location');
+                  const skills = extractArray('skills');
+                  const experience = extractArray('experience');
+                  const education = extractArray('education');
+                  const projects = extractArray('projects');
+                  
+                  return (
+                    <div className="space-y-2 text-xs">
+                      {/* Contact Info */}
+                      {(name || email || phone || location) && (
+                        <div className="animate-fade-in">
+                          <div className="mb-1 flex items-center space-x-1 text-gray-600">
+                            <User className="h-3 w-3" />
+                            <span className="font-medium">Contact</span>
+                          </div>
+                          <div className="space-y-1 pl-4">
+                            {name && <p><span className="font-medium">Name:</span> {name}</p>}
+                            {email && <p><span className="font-medium">Email:</span> {email}</p>}
+                            {phone && <p><span className="font-medium">Phone:</span> {phone}</p>}
+                            {location && <p><span className="font-medium">Location:</span> {location}</p>}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Skills */}
+                      {skills.length > 0 && (
+                        <div className="animate-fade-in">
+                          <div className="mb-1 flex items-center space-x-1 text-gray-600">
+                            <Award className="h-3 w-3" />
+                            <span className="font-medium">Skills ({skills.length})</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1 pl-4">
+                            {skills.slice(0, 6).map((skill: string, idx: number) => (
+                              <span key={`skill-${idx}`} className="rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700">
+                                {skill.length > 40 ? skill.substring(0, 40) + '...' : skill}
+                              </span>
+                            ))}
+                            {skills.length > 6 && (
+                              <span className="text-xs text-gray-500">+{skills.length - 6} more</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Experience */}
+                      {experience.length > 0 && (
+                        <div className="animate-fade-in">
+                          <div className="mb-1 flex items-center space-x-1 text-gray-600">
+                            <Briefcase className="h-3 w-3" />
+                            <span className="font-medium">Experience ({experience.length})</span>
+                          </div>
+                          <div className="space-y-1 pl-4">
+                            {experience.slice(0, 2).map((exp: any, idx: number) => (
+                              <div key={`exp-${idx}`}>
+                                {(exp.job_title || exp.title) && (
+                                  <p className="font-medium">{exp.job_title || exp.title}</p>
+                                )}
+                                {exp.company && <p className="text-gray-600">{exp.company}</p>}
+                                {exp.duration && <p className="text-gray-500">{exp.duration}</p>}
+                              </div>
+                            ))}
+                            {experience.length > 2 && (
+                              <p className="text-gray-500">+{experience.length - 2} more positions</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Education */}
+                      {education.length > 0 && (
+                        <div className="animate-fade-in">
+                          <div className="mb-1 flex items-center space-x-1 text-gray-600">
+                            <GraduationCap className="h-3 w-3" />
+                            <span className="font-medium">Education ({education.length})</span>
+                          </div>
+                          <div className="space-y-1 pl-4">
+                            {education.slice(0, 2).map((edu: any, idx: number) => (
+                              <div key={`edu-${idx}`}>
+                                {(edu.degree || edu.field_of_study) && (
+                                  <p className="font-medium">{edu.degree || edu.field_of_study}</p>
+                                )}
+                                {edu.institution && <p className="text-gray-600">{edu.institution}</p>}
+                                {edu.duration && <p className="text-gray-500">{edu.duration}</p>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Projects */}
+                      {projects.length > 0 && (
+                        <div className="animate-fade-in">
+                          <div className="mb-1 flex items-center space-x-1 text-gray-600">
+                            <FileText className="h-3 w-3" />
+                            <span className="font-medium">Projects ({projects.length})</span>
+                          </div>
+                          <div className="space-y-1 pl-4">
+                            {projects.slice(0, 2).map((proj: any, idx: number) => (
+                              <div key={`proj-${idx}`}>
+                                {proj.name && <p className="font-medium">{proj.name}</p>}
+                                {proj.duration && <p className="text-gray-500">{proj.duration}</p>}
+                              </div>
+                            ))}
+                            {projects.length > 2 && (
+                              <p className="text-gray-500">+{projects.length - 2} more projects</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
             {source.error_message && (
               <p className="mt-1 text-xs text-red-600 line-clamp-2">Error: {source.error_message}</p>
@@ -274,6 +523,27 @@ function SourceCard({ source, onDelete }: { source: KnowledgeSource; onDelete: (
                       <p className="text-gray-600">{edu.institution}</p>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Projects */}
+            {parsedData.projects && parsedData.projects.length > 0 && (
+              <div>
+                <div className="mb-1 flex items-center space-x-1 text-gray-600">
+                  <FileText className="h-3 w-3" />
+                  <span className="font-medium">Projects ({parsedData.projects.length})</span>
+                </div>
+                <div className="space-y-1 pl-4">
+                  {parsedData.projects.slice(0, 2).map((proj: any, idx: number) => (
+                    <div key={idx}>
+                      <p className="font-medium">{proj.name}</p>
+                      {proj.duration && <p className="text-gray-500">{proj.duration}</p>}
+                    </div>
+                  ))}
+                  {parsedData.projects.length > 2 && (
+                    <p className="text-gray-500">+{parsedData.projects.length - 2} more projects</p>
+                  )}
                 </div>
               </div>
             )}

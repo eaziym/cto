@@ -13,3 +13,5 @@ Caddyfile.snippet
 # Local development
 .vscode/
 .idea/
+/supabase/.temp
+.env.local

@@ -8,12 +8,17 @@ import {
   addWebsite,
   addManualText,
 } from '../api/client';
+import { supabase } from '../lib/supabase';
 
 interface AddSourceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   onError: (message: string) => void;
+  onStartStreaming?: (sourceId: string, file: File, userId: string) => void;
+  onStartGitHubStreaming?: (sourceId: string, username: string) => void;
+  onStartLinkedInStreaming?: (sourceId: string, url: string) => void;
+  onStartProjectStreaming?: (sourceId: string, file: File, userId: string) => void;
 }
 
 function AddSourceModal({
@@ -21,26 +26,60 @@ function AddSourceModal({
   onClose,
   onSuccess,
   onError,
+  onStartStreaming,
+  onStartGitHubStreaming,
+  onStartLinkedInStreaming,
+  onStartProjectStreaming,
 }: AddSourceModalProps): JSX.Element | null {
   const [isProcessing, setIsProcessing] = useState(false);
 
   if (!isOpen) return null;
 
   const handleFileUpload = async (file: File, type: 'resume' | 'project') => {
-    setIsProcessing(true);
-    try {
-      if (type === 'resume') {
-        await uploadKnowledgeDocument(file);
-      } else {
-        await uploadProjectDocument(file);
-      }
-      onSuccess();
-      onClose();
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to upload file');
-    } finally {
-      setIsProcessing(false);
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // For testing: use test mode if not authenticated
+    const isTestMode = !user;
+    const userId = isTestMode ? 'test-user-123' : user.id;
+    let sourceId = isTestMode ? `test-${Date.now()}` : '';
+
+    if (!isTestMode) {
+      // Create pending knowledge source first (only for authenticated users)
+      const { data: source, error: createError } = await supabase
+        .from('knowledge_sources')
+        .insert({
+          user_id: user.id,
+          source_type: type === 'resume' ? 'resume' : 'project_document',
+          source_identifier: file.name,
+          processing_status: 'processing',
+          parsed_data: {},
+          metadata: {
+            fileName: file.name,
+            fileSize: file.size,
+          },
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+      if (!source) throw new Error('Failed to create source');
+      
+      sourceId = source.id;
     }
+
+    // Track the source being streamed FIRST
+    if (type === 'resume') {
+      onStartStreaming?.(sourceId, file, userId);
+    } else {
+      onStartProjectStreaming?.(sourceId, file, userId);
+    }
+    
+    // Refresh sources list so the new source appears
+    onSuccess();
+    
+    // Close modal immediately
+    onClose();
   };
 
   const handleSubmit = async (value: string, type: 'linkedin' | 'github' | 'website' | 'text') => {
@@ -48,22 +87,76 @@ function AddSourceModal({
 
     setIsProcessing(true);
     try {
-      switch (type) {
-        case 'linkedin':
-          await addLinkedInProfile(value);
-          break;
-        case 'github':
-          await addGitHubProfile(value);
-          break;
-        case 'website':
-          await addWebsite(value);
-          break;
-        case 'text':
-          await addManualText(value);
-          break;
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (type === 'linkedin' && onStartLinkedInStreaming && user) {
+        // Create pending source for LinkedIn
+        const { data: source, error: createError } = await supabase
+          .from('knowledge_sources')
+          .insert({
+            user_id: user.id,
+            source_type: 'linkedin',
+            source_identifier: value,
+            processing_status: 'processing',
+            parsed_data: {},
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        if (!source) throw new Error('Failed to create source');
+        
+        // Start LinkedIn streaming
+        onStartLinkedInStreaming(source.id, value);
+        onSuccess();
+        onClose();
+      } else if (type === 'github' && onStartGitHubStreaming && user) {
+        // Extract username from URL or use as-is
+        let username = value.trim();
+        if (username.includes('github.com/')) {
+          username = username.split('github.com/')[1].split('/')[0];
+        }
+        username = username.replace(/^@/, '');
+        
+        // Create pending source for GitHub
+        const { data: source, error: createError } = await supabase
+          .from('knowledge_sources')
+          .insert({
+            user_id: user.id,
+            source_type: 'github',
+            source_identifier: username,
+            processing_status: 'processing',
+            parsed_data: {},
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        if (!source) throw new Error('Failed to create source');
+        
+        // Start GitHub streaming
+        onStartGitHubStreaming(source.id, username);
+        onSuccess();
+        onClose();
+      } else {
+        // Fallback to non-streaming for website and manual text
+        switch (type) {
+          case 'linkedin':
+            await addLinkedInProfile(value);
+            break;
+          case 'github':
+            await addGitHubProfile(value);
+            break;
+          case 'website':
+            await addWebsite(value);
+            break;
+          case 'text':
+            await addManualText(value);
+            break;
+        }
+        onSuccess();
+        onClose();
       }
-      onSuccess();
-      onClose();
     } catch (err) {
       onError(err instanceof Error ? err.message : `Failed to add ${type}`);
     } finally {

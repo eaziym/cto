@@ -69,16 +69,26 @@ router.post('/predict', requireAuth, async (req: Request, res: Response) => {
     logger.info(`Predicting preferences for user ${userId}`);
     
     // Get cached aggregated knowledge base from profiles table
+    logger.info('Fetching aggregated knowledge base...');
     const knowledgeBase = await getAggregatedKnowledgeBase(userId);
     
     if (!knowledgeBase) {
+      logger.warn(`No profile found for user ${userId}`);
       return res.status(400).json({
         error: 'No profile found',
         message: 'Please add at least one knowledge source before predicting preferences',
       });
     }
     
+    logger.info('Knowledge base fetched:', {
+      hasName: !!knowledgeBase.name,
+      hasSummary: !!knowledgeBase.summary,
+      skillsCount: knowledgeBase.skills?.length || 0,
+      experienceCount: knowledgeBase.experience?.length || 0,
+    });
+    
     if (!knowledgeBase.summary && (!knowledgeBase.skills || knowledgeBase.skills.length === 0)) {
+      logger.warn(`Insufficient knowledge base for user ${userId}`);
       return res.status(400).json({
         error: 'Insufficient knowledge base',
         message: 'Please add at least one knowledge source before predicting preferences',
@@ -86,7 +96,9 @@ router.post('/predict', requireAuth, async (req: Request, res: Response) => {
     }
     
     // Use AI to predict preferences
+    logger.info('Calling predictPreferences...');
     const predictedPreferences = await predictPreferences(knowledgeBase);
+    logger.info('Preferences predicted successfully');
     
     // Format predictions with confidence scores for JSONB storage
     const predictedIndustries = predictedPreferences.industries.map(p => ({
@@ -121,13 +133,16 @@ router.post('/predict', requireAuth, async (req: Request, res: Response) => {
     };
     
     if (existingPrefs) {
-      // Update existing
+      // Update existing - clear confirmed selections when regenerating predictions
       const { data, error } = await supabaseAdmin
         .from('user_preferences')
         .update({
           predicted_industries: predictedIndustries,
           predicted_roles: predictedRoles,
           predicted_companies: predictedCompanies,
+          confirmed_industries: [], // Clear confirmed selections
+          confirmed_roles: [], // Clear confirmed selections
+          confirmed_companies: [], // Clear confirmed selections
           prediction_metadata: predictionMetadata,
           last_predicted_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),

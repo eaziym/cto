@@ -12,6 +12,16 @@ export default defineConfig({
       }
     }
   },
+  build: {
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        // Remove console.log in production
+        drop_console: true,
+        drop_debugger: true,
+      }
+    }
+  },
   test: {
     environment: 'jsdom',
     setupFiles: './vitest.setup.ts'
